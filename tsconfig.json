@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "baseUrl": "./",
+
+    "paths": {
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@routes/*": ["src/routes/*"],
+      "@middlewares/*": ["src/middlewares/*"]
+    },
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "typeRoots": [
+      "src/types",
+      "src/**/*",
+      "src/types/**/*.d.ts",
+      "./node_modules/@types"
+    ],
+    "types": ["node", "express"]
+  },
+
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
