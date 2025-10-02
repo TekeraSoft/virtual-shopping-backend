@@ -17,6 +17,9 @@ const io = new Server(httpServer, {
   }
 });
 
+
+
+
 const PORT = process.env.PORT || 3021;
 
 
@@ -58,6 +61,18 @@ io.on('connection', (socket) => {
       position: data.position,
       rotation: data.rotation
     });
+  });
+
+  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string }) => {
+    console.log(`RPC Callback received for event: ${data.target}`);
+    if (data.target === "all") {
+      io.emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value });
+    } else if (data.target === "others") {
+      socket.broadcast.emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value });
+    } else if (data.target === "me") {
+      socket.emit("rpc:callback", { message: "RPC callback to self", method: data.method, value: data.value });
+    }
+
   });
 
   socket.on('disconnect', () => {

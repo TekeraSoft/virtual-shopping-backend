@@ -5,7 +5,11 @@ import { IUserPayload } from "../types/user/types";
 class UserService {
     verifyToken(token: string): IUserPayload {
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as IUserPayload;
+            if (!process.env.JWT_SECRET) {
+                throw new Error("JWT_SECRET is not defined in environment variables.");
+            }
+            const secret = Buffer.from(process.env.JWT_SECRET, 'base64');
+            const decoded = jwt.verify(token, secret, { algorithms: ['HS512'] });
             return decoded as IUserPayload;
         } catch (error) {
             if (error instanceof TokenExpiredError) {

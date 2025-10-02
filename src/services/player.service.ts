@@ -16,6 +16,7 @@ export class PlayerService {
     position: { x: number; y: number; z: number },
     rotation: { x: number; y: number; z: number }
   ): void {
+    console.log("player updated:", { socketId, userId, position, rotation });
     playerPositions.set(socketId, {
       userId,
       position,

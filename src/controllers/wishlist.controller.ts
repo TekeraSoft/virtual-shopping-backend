@@ -21,7 +21,7 @@ export async function addToWishlist(req: Request, res: Response) {
     return res.status(200).json({
         success: true,
         message: "Item added to wishlist",
-        wishlist: WishlistService.getWishlist(user.userId)
+        data: WishlistService.getWishlist(user.userId)
     });
 }
 
@@ -61,7 +61,7 @@ export async function removeFromWishlist(req: Request, res: Response) {
         return res.status(200).json({
             success: true,
             message: "Item removed from wishlist",
-            wishlist: WishlistService.getWishlist(user.userId)
+            data: WishlistService.getWishlist(user.userId)
         });
     }
 

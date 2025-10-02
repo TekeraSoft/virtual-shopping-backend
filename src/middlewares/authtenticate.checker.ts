@@ -15,20 +15,23 @@ export const authenticate = async (
 ): Promise<void> => {
 
 
-    const cookie = req.header("cookie");
-    if (!cookie) {
-        res.status(401).json({ message: "Access denied. Cookie yok" });
+
+    const authHeader = req.header("Authorization");
+
+    if (!authHeader) {
+        res.status(401).json({ message: "Access denied. Authorization header yok" });
         return;
     }
 
-    const cookies = cookie.split(";"); // Her bir cookie çiftini ayır
-    const tokenCookie = cookies.find((c) => c.trim().startsWith("token="));
-    if (!tokenCookie) {
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
         res.status(401).json({ message: "Access denied. Token yok" });
         return;
     }
+
     try {
-        const token = tokenCookie.split("=")[1];
+
         const user = userService.verifyToken(token);
         // const user = await userService.getUserById(decoded._id.toString());
 
