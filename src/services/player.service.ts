@@ -6,6 +6,14 @@ export interface PlayerPosition {
   timestamp: number;
 }
 
+interface ICreatePlayer {
+  userId: string;
+  roomId: string;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number, w: number };
+  timestamp: number;
+}
+
 // Global state: socketId -> player data
 const playerPositions: Map<string, PlayerPosition> = new Map();
 
@@ -28,6 +36,16 @@ export class PlayerService {
     });
   }
 
+  static createPlayer({ userId, roomId, position, rotation }: ICreatePlayer): ICreatePlayer {
+    const newPlayer: ICreatePlayer = {
+      userId,
+      roomId,
+      position,
+      rotation,
+      timestamp: Date.now()
+    };
+    return newPlayer;
+  }
   // Get all active players
   static getAllPlayers(): PlayerPosition[] {
     return Array.from(playerPositions.values());
