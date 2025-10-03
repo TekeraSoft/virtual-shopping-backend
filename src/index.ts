@@ -50,8 +50,7 @@ io.on('connection', (socket) => {
     rotation: { x: number; y: number; z: number, w: number };
   }) => {
 
-    console.log("player update received:", data);
-    // Update player position in state
+
     PlayerService.updatePlayerPosition(
       socket.id,
       data.userId,
@@ -88,13 +87,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:getusers', (data: { roomId: string; }) => {
-    console.log("roomid:", data.roomId)
+
     const roomObj = RoomService.getRoom(data.roomId);
     const roomResponse = {
       roomId: roomObj?.roomId,
       timestamp: roomObj?.timestamp,
       players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, socketId]) => ({ userId, socketId })) : []
     };
+    console.log("room:getusers:", roomResponse);
 
     socket.emit('room:users', { room: roomResponse });
   });
@@ -116,7 +116,7 @@ io.on('connection', (socket) => {
   });
 
   // WebRTC Voice Chat Events
-  socket.on('voice:join', (data: { roomId: string; userId: string }) => {
+  socket.on('voice:join', (data: { roomId: string; userId: string, isMuted: boolean }) => {
     console.log(`User ${data.userId} joining voice chat in room: ${data.roomId}`);
 
     // Get existing peers in the room before adding new peer
@@ -124,7 +124,7 @@ io.on('connection', (socket) => {
 
     // Add new peer to voice chat
     VoiceService.addPeer(socket.id, data.userId, data.roomId);
-
+    socket.join(data.roomId);
     // Send existing peers list to the newly joined user
     socket.emit('voice:existing-peers', {
       peers: existingPeers.map(peer => ({
@@ -137,7 +137,8 @@ io.on('connection', (socket) => {
     // Notify other peers in the room about the new user
     socket.to(data.roomId).emit('voice:user-joined', {
       userId: data.userId,
-      socketId: socket.id
+      socketId: socket.id,
+      isMuted: data.isMuted
     });
   });
 
