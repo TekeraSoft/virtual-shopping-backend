@@ -33,10 +33,8 @@ export const authenticate = async (
     try {
 
         const user = userService.verifyToken(token);
-        // const user = await userService.getUserById(decoded._id.toString());
 
         if (!user) {
-
             res.status(404).json({ message: "Kullanıcı bulunamadı." });
             return;
         }

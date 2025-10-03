@@ -1,7 +1,8 @@
 export interface PlayerPosition {
   userId: string;
+  roomId: string;
   position: { x: number; y: number; z: number };
-  rotation: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number, w: number };
   timestamp: number;
 }
 
@@ -13,12 +14,14 @@ export class PlayerService {
   static updatePlayerPosition(
     socketId: string,
     userId: string,
+    roomId: string,
     position: { x: number; y: number; z: number },
-    rotation: { x: number; y: number; z: number }
+    rotation: { x: number; y: number; z: number, w: number }
   ): void {
-    console.log("player updated:", { socketId, userId, position, rotation });
+    console.log("player updated:", { socketId, userId, roomId, position, rotation });
     playerPositions.set(socketId, {
       userId,
+      roomId,
       position,
       rotation,
       timestamp: Date.now()
