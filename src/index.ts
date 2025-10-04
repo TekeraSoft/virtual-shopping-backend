@@ -24,7 +24,6 @@ const io = new Server(httpServer, {
 });
 
 
-
 app.use(cors());
 app.use(express.json());
 
@@ -70,15 +69,18 @@ io.on('connection', (socket) => {
       data.rotation
     );
 
-
+    console.log("player moved:", socket.id, { userId: data.userId, position: data.position, rotation: data.rotation });
     // Send to all other clients in the same room
     socket.to(data.roomId).emit('player:moved', {
       userId: data.userId,
       position: data.position,
       rotation: data.rotation
     });
+  });
 
-
+  socket.on('player:disconnect', (data: { userId: string, roomId: string }) => {
+    console.log("player disconnect:", data.userId);
+    RoomService.removePlayerFromRoom(data.roomId, data.userId);
   });
 
   socket.on('room:create', (data: { userId: string }) => {
@@ -211,15 +213,15 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  socket.on('disconnect', (reason: string) => {
+    console.log('Client disconnected:', socket.id, 'Reason:', reason);
 
     // Remove player from state
     const player = PlayerService.getPlayer(socket.id);
     const voicePeer = VoiceService.getPeer(socket.id);
 
-    RoomService.removePlayerFromRoom(player?.userId || '');
-    PlayerService.removePlayer(socket.id);
+    // RoomService.removePlayerFromRoom(player?.userId || '');
+
 
     // Remove from voice chat and notify others
     if (voicePeer) {
@@ -229,8 +231,8 @@ io.on('connection', (socket) => {
       VoiceService.removePeer(socket.id);
     }
 
-    // Notify all clients that player disconnected
     if (player) {
+      PlayerService.removePlayer(socket.id);
       io.emit('player:disconnected', {
         socketId: socket.id,
         userId: player.userId

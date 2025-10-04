@@ -39,14 +39,22 @@ export class RoomService {
     }
 
     // Remove player from room
-    static removePlayerFromRoom(userId: string): boolean {
-        const room = Array.from(rooms.values()).find(r => r.players.has(userId));
+    static removePlayerFromRoom(roomId: string, userId: string): boolean {
+        const room = rooms.get(roomId);
         if (room) {
             room.players.delete(userId);
             return true;
         }
         return false;
     }
+    // static removePlayerFromRoom(userId: string): boolean {
+    //     const room = Array.from(rooms.values()).find(r => r.players.has(userId));
+    //     if (room) {
+    //         room.players.delete(userId);
+    //         return true;
+    //     }
+    //     return false;
+    // }
     // Delete room
     static deleteRoom(roomId: string): boolean {
         return rooms.delete(roomId);
