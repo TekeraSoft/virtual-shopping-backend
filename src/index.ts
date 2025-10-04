@@ -64,8 +64,8 @@ io.on('connection', (socket) => {
 
     PlayerService.updatePlayerPosition(
       socket.id,
-      data.roomId,
       data.userId,
+      data.roomId,
       data.position,
       data.rotation
     );
@@ -86,16 +86,15 @@ io.on('connection', (socket) => {
     const room = RoomService.createRoom(data.userId, socket.id);
     socket.join(room.roomId);
     console.log("room", room);
-    socket.emit('room:created', { roomId: room.roomId, userId: data.userId });
+    socket.emit('room:created', { roomId: room.roomId });
   });
 
   socket.on('room:join', (data: { roomId: string; userId: string }) => {
     console.log("room join:", data.roomId, " by user:", data.userId);
     RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId);
     socket.join(data.roomId);
+
     socket.emit('room:joined', { roomId: data.roomId });
-    const room = RoomService.getRoom(data.roomId);
-    console.log("room after join:", room);
     // Notify other users in the room
     socket.to(data.roomId).emit('room:joined', { userId: data.userId });
   });

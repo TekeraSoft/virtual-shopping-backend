@@ -10,12 +10,13 @@ const rooms: Map<string, IRoom> = new Map();
 export class RoomService {
 
     static createRoom(userId: string, socketId: string): IRoom {
+        const roomId = crypto.randomUUID();
         const newRoom: IRoom = {
-            roomId: userId,
+            roomId: roomId,
             timestamp: Date.now(),
             players: new Map([[userId, socketId]])
         };
-        rooms.set(userId, newRoom);
+        rooms.set(roomId, newRoom);
         return newRoom;
     }
     // Get room by ID
