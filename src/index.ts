@@ -91,6 +91,17 @@ io.on('connection', (socket) => {
     socket.emit('room:created', { roomId: room.roomId });
   });
 
+  socket.on('room:left', (data: { userId: string, roomId: string }) => {
+    console.log("room:left by user:", data.userId, data.roomId);
+    RoomService.removePlayerFromRoom(data.userId, data.roomId);
+    VoiceService.removePeer(socket.id);
+    socket.leave(data.roomId);
+
+    socket.to(data.roomId).emit('room:lefted', {
+      userId: data.userId
+    });
+  });
+
   socket.on('room:join', (data: { roomId: string; userId: string }) => {
     console.log("room join:", data.roomId, " by user:", data.userId);
     RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId);
@@ -114,12 +125,12 @@ io.on('connection', (socket) => {
     socket.emit('room:users', { room: roomResponse });
   });
 
-  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string }) => {
+  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string, roomId: string }) => {
     console.log(`RPC Callback received for event: ${data.target}`);
     if (data.target === "all") {
-      io.emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value });
+      io.to(data.roomId).emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value });
     } else if (data.target === "others") {
-      socket.broadcast.emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value });
+      socket.broadcast.to(data.roomId).emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value });
     } else if (data.target === "me") {
       socket.emit("rpc:callback", { message: "RPC callback to self", method: data.method, value: data.value });
     }
