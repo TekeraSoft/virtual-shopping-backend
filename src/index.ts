@@ -125,12 +125,12 @@ io.on('connection', (socket) => {
     socket.emit('room:users', { room: roomResponse });
   });
 
-  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string, roomId: string }) => {
+  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string, roomId: string, userId: string }) => {
     console.log(`RPC Callback received for event: ${data.target}`);
     if (data.target === "all") {
-      io.to(data.roomId).emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value });
+      io.to(data.roomId).emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value, userId: data.userId });
     } else if (data.target === "others") {
-      socket.broadcast.to(data.roomId).emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value });
+      socket.broadcast.to(data.roomId).emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value, userId: data.userId });
     } else if (data.target === "me") {
       socket.emit("rpc:callback", { message: "RPC callback to self", method: data.method, value: data.value });
     }
