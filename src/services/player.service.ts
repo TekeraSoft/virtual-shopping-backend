@@ -8,10 +8,8 @@ export interface PlayerPosition {
 
 interface ICreatePlayer {
   userId: string;
-  roomId: string;
-  position: { x: number; y: number; z: number };
-  rotation: { x: number; y: number; z: number, w: number };
   timestamp: number;
+  online: boolean;
 }
 
 // Global state: socketId -> player data
@@ -36,13 +34,11 @@ export class PlayerService {
     });
   }
 
-  static createPlayer({ userId, roomId, position, rotation }: ICreatePlayer): ICreatePlayer {
+  static createPlayer({ userId, online }: ICreatePlayer): ICreatePlayer {
     const newPlayer: ICreatePlayer = {
       userId,
-      roomId,
-      position,
-      rotation,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      online,
     };
     return newPlayer;
   }

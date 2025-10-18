@@ -1,6 +1,7 @@
 // src/services/user.service.ts
 import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
-import { IUserPayload } from "../types/user/types";
+import { IUserPayload, TUserTypes } from "../types/user/types";
+import { users } from "src/data/users";
 
 class UserService {
     verifyToken(token: string): IUserPayload {
@@ -24,6 +25,29 @@ class UserService {
             }
         }
     }
+    getUserInfoWithEmail(email: string): IUserPayload | null {
+
+        const user = users.find(user => user.email === email);
+        return user
+            ? {
+                ...user,
+                roles: user.roles.map(role => role as TUserTypes),
+                sellerId: user.sellerId ?? "",
+            }
+            : null;
+    }
+    getUserInfoWithId(id: string): IUserPayload | null {
+
+        const user = users.find(user => user.userId === id);
+        return user
+            ? {
+                ...user,
+                roles: user.roles.map(role => role as TUserTypes),
+                sellerId: user.sellerId ?? "",
+            }
+            : null;
+    }
+
 }
 
 export default new UserService();

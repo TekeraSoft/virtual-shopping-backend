@@ -46,14 +46,13 @@ io.on('connection', (socket) => {
   socket.emit('players:all', PlayerService.getAllPlayers());
 
   socket.on('player:create', (data: {
-    userId: string, roomId: string, position: { x: number; y: number; z: number };
-    rotation: { x: number; y: number; z: number, w: number };
+    userId: string, online: boolean
   }) => {
-    console.log("player created with userId:", data.userId);
-    const player = PlayerService.createPlayer({ userId: data.userId, roomId: data.roomId, position: data.position, rotation: data.rotation, timestamp: Date.now() });
+
+    const player = PlayerService.createPlayer({ userId: data.userId, timestamp: Date.now(), online: data.online || true });
 
     console.log("player", player);
-    socket.emit('player:created', { playerId: player.userId, roomId: player.roomId });
+    socket.emit('player:created', { playerId: player.userId });
   });
 
   // Listen for player position updates
