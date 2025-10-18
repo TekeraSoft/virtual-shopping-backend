@@ -64,4 +64,8 @@ export class UserService {
     static getUserFriendInvitations(userId: string): IUserPayload[] {
         return this.friendInvitations.get(userId) || [];
     }
+    static hasUserInvited(email: string, userId: string): boolean {
+        const invitations = this.friendInvitations.get(userId) || [];
+        return invitations.some(invitation => invitation.email === email);
+    }
 }

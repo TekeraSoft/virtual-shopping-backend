@@ -41,11 +41,23 @@ app.get('/health', (req, res) => {
 app.post('/user/invite-friend', (req, res) => {
   const { email, userId } = req.body;
   console.log("email, userId", email, userId)
+  const myFriends = UserService.getUserInfoWithId(userId)?.friends || [];
+  const hasInvited = UserService.hasUserInvited(email, userId);
+  if (myFriends.find(friend => friend.email === email)) {
+    res.status(403).json({ status: 403, message: 'User is already your friend' });
+    return;
+  }
+
+  if(hasInvited) {
+    res.status(403).json({ status: 403, message: 'You have already invited this user' });
+    return;
+  }
+
   const userInvited = UserService.getUserInfoWithEmail(email)
   const userInviter = UserService.getUserInfoWithId(userId);
   if (userInvited && userInviter) {
     console.log("userInvited ve inviter var")
-    UserService.inviteUserFriend(userInvited.email, userInviter);
+    UserService.inviteUserFriend(userInvited.userId, userInviter);
 
     // Check if invited user is online and send socket notification
     const invitedPlayer = PlayerService.getPlayer(userInvited.userId);
@@ -73,28 +85,38 @@ app.post('/user/invite-friend', (req, res) => {
 
 app.post('/user/accept-friend', (req, res) => {
   const { inviterId, userId } = req.body;
+  console.log("inviterId, userId", inviterId, userId)
   const myInvitations = UserService.getUserFriendInvitations(userId);
   console.log("myInvitations:", myInvitations);
   const inviter = myInvitations.find(invite => invite.userId === inviterId);
   if (inviter) {
     console.log("inviter:", inviter);
     const inviterPlayer = PlayerService.getPlayer(inviterId);
-
+    console.log("inviterPlayer", inviterPlayer)
     UserService.addUserFriend(userId, inviter);
     const user = UserService.getUserInfoWithId(userId);
     if (user) {
+      console.log("user da var", user)
       UserService.addUserFriend(inviterId, user);
-      
+
       if (inviterPlayer) {
+        console.log("inviterPlayer.socketId", inviterPlayer.socketId)
         const playerFriends = UserService.getUserInfoWithId(inviterId)?.friends || [];
-        io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends);
+        io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+          const player = {
+            userId: friend.userId,
+            nameSurname: friend.nameSurname,
+            online: PlayerService.getPlayer(friend.userId)?.online || false
+          };
+          return player;
+        }));
       }
     }
 
 
     res.status(200).json({ status: 200, message: 'Friend added successfully' });
   } else {
-    res.status(404).json({ status: 404, message: 'Invitation not found' });
+    res.status(403).json({ status: 403, message: 'Invitation not found' });
   }
 });
 
