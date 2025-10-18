@@ -30,4 +30,5 @@ export interface IUserPayload {
     exp: number; // expires at (timestamp)
     sellerId: string;
     avatar?: string;
+    friends?: IUserPayload[];
 };

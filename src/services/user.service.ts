@@ -3,8 +3,11 @@ import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { IUserPayload, TUserTypes } from "../types/user/types";
 import { users } from "src/data/users";
 
-class UserService {
-    verifyToken(token: string): IUserPayload {
+
+export class UserService {
+    private static userFriends: Map<string, IUserPayload[]> = new Map();
+    private static friendInvitations: Map<string, IUserPayload[]> = new Map();
+    static verifyToken(token: string): IUserPayload {
         try {
             if (!process.env.JWT_SECRET) {
                 throw new Error("JWT_SECRET is not defined in environment variables.");
@@ -25,7 +28,7 @@ class UserService {
             }
         }
     }
-    getUserInfoWithEmail(email: string): IUserPayload | null {
+    static getUserInfoWithEmail(email: string): IUserPayload | null {
 
         const user = users.find(user => user.email === email);
         return user
@@ -36,7 +39,7 @@ class UserService {
             }
             : null;
     }
-    getUserInfoWithId(id: string): IUserPayload | null {
+    static getUserInfoWithId(id: string): IUserPayload | null {
 
         const user = users.find(user => user.userId === id);
         return user
@@ -44,10 +47,21 @@ class UserService {
                 ...user,
                 roles: user.roles.map(role => role as TUserTypes),
                 sellerId: user.sellerId ?? "",
+                friends: this.userFriends.get(id) || [],
             }
             : null;
     }
-
+    static addUserFriend(userId: string, friend: IUserPayload): void {
+        const friends = this.userFriends.get(userId) || [];
+        friends.push(friend);
+        this.userFriends.set(userId, friends);
+    }
+    static inviteUserFriend(userId: string, friend: IUserPayload): void {
+        const invitations = this.friendInvitations.get(userId) || [];
+        invitations.push(friend);
+        this.friendInvitations.set(userId, invitations);
+    }
+    static getUserFriendInvitations(userId: string): IUserPayload[] {
+        return this.friendInvitations.get(userId) || [];
+    }
 }
-
-export default new UserService();

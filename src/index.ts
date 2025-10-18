@@ -8,9 +8,9 @@ import wishlistRouter from './routes/wishlist.router';
 import { RoomService } from '@services/room.service';
 import { VoiceService } from './services/voice.service';
 import { VoiceOffer, VoiceAnswer, VoiceIceCandidate, VoiceToggleMute } from './types/voice/types';
+import { UserService } from '@services/user.service';
 
 const PORT = process.env.PORT || 3021;
-
 
 dotenv.config();
 
@@ -32,12 +32,71 @@ app.use(cors());
 app.use(express.json());
 
 
-app.use('/api/wishlist', wishlistRouter);
+app.use('/wishlist', wishlistRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
 });
 
+app.post('/user/invite-friend', (req, res) => {
+  const { email, userId } = req.body;
+  console.log("email, userId", email, userId)
+  const userInvited = UserService.getUserInfoWithEmail(email)
+  const userInviter = UserService.getUserInfoWithId(userId);
+  if (userInvited && userInviter) {
+    console.log("userInvited ve inviter var")
+    UserService.inviteUserFriend(userInvited.email, userInviter);
+
+    // Check if invited user is online and send socket notification
+    const invitedPlayer = PlayerService.getPlayer(userInvited.userId);
+    console.log("invitedPlayer", invitedPlayer)
+    if (invitedPlayer && invitedPlayer.online) {
+      console.log("invited player var ve online")
+      const invitedSocketId = invitedPlayer.socketId;
+      if (invitedSocketId) {
+        io.to(invitedSocketId).emit('friend:invitation-received', {
+          inviterId: userInviter.userId,
+          inviterName: userInviter.nameSurname,
+          inviterEmail: userInviter.email,
+          message: `${userInviter.nameSurname} sizi arkadaş olarak ekledi!`,
+          timestamp: Date.now()
+        });
+      }
+
+    }
+
+    res.status(200).json({ status: 200, message: 'Invitation sent' });
+  } else {
+    res.status(404).json({ status: 404, message: 'User not found' });
+  }
+});
+
+app.post('/user/accept-friend', (req, res) => {
+  const { inviterId, userId } = req.body;
+  const myInvitations = UserService.getUserFriendInvitations(userId);
+  console.log("myInvitations:", myInvitations);
+  const inviter = myInvitations.find(invite => invite.userId === inviterId);
+  if (inviter) {
+    console.log("inviter:", inviter);
+    const inviterPlayer = PlayerService.getPlayer(inviterId);
+
+    UserService.addUserFriend(userId, inviter);
+    const user = UserService.getUserInfoWithId(userId);
+    if (user) {
+      UserService.addUserFriend(inviterId, user);
+      
+      if (inviterPlayer) {
+        const playerFriends = UserService.getUserInfoWithId(inviterId)?.friends || [];
+        io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends);
+      }
+    }
+
+
+    res.status(200).json({ status: 200, message: 'Friend added successfully' });
+  } else {
+    res.status(404).json({ status: 404, message: 'Invitation not found' });
+  }
+});
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -46,13 +105,24 @@ io.on('connection', (socket) => {
   socket.emit('players:all', PlayerService.getAllPlayers());
 
   socket.on('player:create', (data: {
-    userId: string, online: boolean
+    userId: string, userName: string, online: boolean
   }) => {
+    const invitations = UserService.getUserFriendInvitations(data.userId);
+    console.log("invitations:", invitations);
+    const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, timestamp: Date.now(), online: data.online || true });
 
-    const player = PlayerService.createPlayer({ userId: data.userId, timestamp: Date.now(), online: data.online || true });
 
-    console.log("player", player);
-    socket.emit('player:created', { playerId: player.userId });
+    const playerFriends = UserService.getUserInfoWithId(data.userId)?.friends || [];
+    const friendsWithStatus = playerFriends.map(friend => {
+      return {
+        userId: friend.userId,
+        nameSurname: friend.nameSurname,
+        online: PlayerService.getPlayer(friend.userId) ? true : false,
+        invitations: invitations
+      };
+    });
+    console.log("player", friendsWithStatus);
+    socket.emit('player:created', { userId: player.userId, friends: friendsWithStatus });
   });
 
   // Listen for player position updates
@@ -65,7 +135,6 @@ io.on('connection', (socket) => {
 
 
     PlayerService.updatePlayerPosition(
-      socket.id,
       data.userId,
       data.roomId,
       data.position,
@@ -84,11 +153,16 @@ io.on('connection', (socket) => {
   socket.on('player:disconnect', (data: { userId: string, roomId: string }) => {
     console.log("player disconnect:", data.userId);
     RoomService.removePlayerFromRoom(data.roomId, data.userId);
+    PlayerService.removePlayer(data.userId);
+
+    socket.to(data.roomId).emit('player:disconnected', {
+      userId: data.userId
+    });
   });
 
-  socket.on('room:create', (data: { userId: string }) => {
+  socket.on('room:create', (data: { userId: string, nameSurname: string }) => {
     console.log("room:create by user:", data.userId);
-    const room = RoomService.createRoom(data.userId, socket.id);
+    const room = RoomService.createRoom(data.userId, socket.id, data.nameSurname);
     socket.join(room.roomId);
     console.log("room", room);
     socket.emit('room:created', { roomId: room.roomId });
@@ -105,14 +179,14 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('room:join', (data: { roomId: string; userId: string }) => {
+  socket.on('room:join', (data: { roomId: string; userId: string, nameSurname: string }) => {
     console.log("room join:", data.roomId, " by user:", data.userId);
-    RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId);
+    RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId, data.nameSurname);
     socket.join(data.roomId);
 
     socket.emit('room:joined', { roomId: data.roomId });
     // Notify other users in the room
-    socket.to(data.roomId).emit('room:joined', { userId: data.userId });
+    socket.to(data.roomId).emit('room:joined', { userId: data.userId, nameSurname: data.nameSurname });
   });
 
   socket.on('room:getusers', (data: { roomId: string; }) => {
@@ -121,21 +195,21 @@ io.on('connection', (socket) => {
     const roomResponse = {
       roomId: roomObj?.roomId,
       timestamp: roomObj?.timestamp,
-      players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, socketId]) => ({ userId, socketId })) : []
+      players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, { socketId, nameSurname }]) => ({ userId, socketId, nameSurname })) : []
     };
     console.log("room:getusers:", roomResponse);
 
     socket.emit('room:users', { room: roomResponse });
   });
 
-  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string, roomId: string, userId: string }) => {
+  socket.on("rpc:callback", (data: { target: "all" | "others" | "me", method: string, value: string, roomId: string, userId: string, nameSurname: string }) => {
     console.log(`RPC Callback received for event: ${data.target}`);
     if (data.target === "all") {
-      io.to(data.roomId).emit("rpc:callback", { message: "RPC callback to all clients", method: data.method, value: data.value, userId: data.userId });
+      io.to(data.roomId).emit("rpc:callback", { method: data.method, value: data.value, userId: data.userId, nameSurname: data.nameSurname });
     } else if (data.target === "others") {
-      socket.broadcast.to(data.roomId).emit("rpc:callback", { message: "RPC callback to other clients", method: data.method, value: data.value, userId: data.userId });
+      socket.broadcast.to(data.roomId).emit("rpc:callback", { method: data.method, value: data.value, userId: data.userId, nameSurname: data.nameSurname });
     } else if (data.target === "me") {
-      socket.emit("rpc:callback", { message: "RPC callback to self", method: data.method, value: data.value });
+      socket.emit("rpc:callback", { method: data.method, value: data.value });
     }
   });
 

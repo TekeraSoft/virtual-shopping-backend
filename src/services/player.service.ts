@@ -1,6 +1,8 @@
 export interface PlayerPosition {
   userId: string;
+  socketId?: string;
   roomId: string;
+  online?: boolean;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number, w: number };
   timestamp: number;
@@ -8,24 +10,26 @@ export interface PlayerPosition {
 
 interface ICreatePlayer {
   userId: string;
+  socketId: string;
   timestamp: number;
   online: boolean;
 }
 
-// Global state: socketId -> player data
+// Global state: userId -> player data
 const playerPositions: Map<string, PlayerPosition> = new Map();
+// Socket ID to User ID mapping
+const socketToUserId: Map<string, string> = new Map();
 
 export class PlayerService {
   // Update player position
   static updatePlayerPosition(
-    socketId: string,
     userId: string,
     roomId: string,
     position: { x: number; y: number; z: number },
     rotation: { x: number; y: number; z: number, w: number }
   ): void {
     // console.log("player updated:", { socketId, userId, roomId, position, rotation });
-    playerPositions.set(socketId, {
+    playerPositions.set(userId, {
       userId,
       roomId,
       position,
@@ -34,12 +38,26 @@ export class PlayerService {
     });
   }
 
-  static createPlayer({ userId, online }: ICreatePlayer): ICreatePlayer {
+  static createPlayer({ userId, socketId, online }: ICreatePlayer): ICreatePlayer {
     const newPlayer: ICreatePlayer = {
       userId,
+      socketId,
       timestamp: Date.now(),
       online,
     };
+    
+    // Store socket ID mapping
+    socketToUserId.set(socketId, userId);
+    
+    playerPositions.set(userId, {
+      userId,
+      socketId,
+      roomId: "",
+      online: online,
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      timestamp: Date.now()
+    });
     return newPlayer;
   }
   // Get all active players
@@ -48,13 +66,28 @@ export class PlayerService {
   }
 
   // Get player by socket ID
-  static getPlayer(socketId: string): PlayerPosition | undefined {
-    return playerPositions.get(socketId);
+  static getPlayer(userId: string): PlayerPosition | undefined {
+    return playerPositions.get(userId);
+  }
+
+  // Get player's socket ID
+  static getPlayerSocketId(userId: string): string | undefined {
+    const player = playerPositions.get(userId);
+    return player?.socketId;
+  }
+
+  // Get user ID by socket ID
+  static getUserIdBySocketId(socketId: string): string | undefined {
+    return socketToUserId.get(socketId);
   }
 
   // Remove player (on disconnect)
-  static removePlayer(socketId: string): void {
-    playerPositions.delete(socketId);
+  static removePlayer(userId: string): void {
+    const player = playerPositions.get(userId);
+    if (player?.socketId) {
+      socketToUserId.delete(player.socketId);
+    }
+    playerPositions.delete(userId);
   }
 
   // Get total player count

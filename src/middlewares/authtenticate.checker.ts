@@ -2,7 +2,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { IUserPayload } from "../types/user/types";
-import userService from "../services/user.service";
+import { UserService } from "@services/user.service";
 
 interface CustomRequest extends Request {
     user?: IUserPayload;
@@ -32,7 +32,7 @@ export const authenticate = async (
 
     try {
 
-        const user = userService.verifyToken(token);
+        const user = UserService.verifyToken(token);
 
         if (!user) {
             res.status(404).json({ message: "Kullanıcı bulunamadı." });
