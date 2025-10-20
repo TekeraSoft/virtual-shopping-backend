@@ -47,6 +47,11 @@ app.post('/user/invite-friend', async (req, res) => {
     return;
   }
   const myFriends = UserService.getUserInfoWithId(userId)?.friends || [];
+
+  if (myFriends.find(friend => friend.email === email)) {
+    res.status(403).json({ status: 403, message: 'User is already your friend' });
+    return;
+  }
   const invitedUser = UserService.getUserInfoWithEmail(email);
   if (!invitedUser) {
     res.status(404).json({ status: 404, message: 'Davet edilen kullanıcı bulunamadı.' });
@@ -54,17 +59,46 @@ app.post('/user/invite-friend', async (req, res) => {
   }
   const invitedUserInviteMe = await UserService.hasUserInvited(invitedUser.userId);
   if (invitedUserInviteMe) {
-    UserService.addUserToFriendList(userId, invitedUser);
-    UserService.addUserToFriendList(invitedUser.userId, metaUser);
-    res.status(200).json({ status: 200, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.' });
+    await UserService.addUserToFriendList(userId, invitedUser);
+    await UserService.addUserToFriendList(invitedUser.userId, metaUser);
+    const inviterPlayer = PlayerService.getPlayer(invitedUser.userId);
+    const invitedPlayer = PlayerService.getPlayer(userId);
+    if (inviterPlayer) {
+      console.log("inviterPlayer.socketId", inviterPlayer.socketId)
+      const playerFriends = UserService.getUserInfoWithId(inviterPlayer.userId)?.friends || [];
+      console.log("playerFriends inviterPlayer", playerFriends)
+      io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+        const player = {
+          userId: friend.userId,
+          email: friend.email,
+          nameSurname: friend.nameSurname,
+          online: PlayerService.getPlayer(friend.userId)?.online || false
+        };
+        return player;
+      }));
+    }
+    if (invitedPlayer) {
+      console.log("invitedPlayer.socketId", invitedPlayer.socketId)
+      const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
+      console.log("playerFriends invitedPlayer", playerFriends)
+      io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+        const player = {
+          userId: friend.userId,
+          email: friend.email,
+          nameSurname: friend.nameSurname,
+          online: PlayerService.getPlayer(friend.userId)?.online || false
+        };
+        return player;
+      }));
+    }
+
+
+    res.status(200).json({ status: 200, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
     return;
   }
   const hasInvited = await UserService.hasUserInvited(userId);
 
-  if (myFriends.find(friend => friend.email === email)) {
-    res.status(403).json({ status: 403, message: 'User is already your friend' });
-    return;
-  }
+
 
   if (hasInvited) {
     res.status(403).json({ status: 403, message: 'You have already invited this user' });
@@ -136,7 +170,7 @@ app.post('/room/invite-friend', async (req, res) => {
   }
 });
 
-app.post('/user/accept-friend', (req, res) => {
+app.post('/user/accept-friend', async (req, res) => {
   const { inviterId, userId } = req.body;
   console.log("inviterId, userId", inviterId, userId)
   const myInvitations = UserService.getUserFriendInvitations(userId);
@@ -146,11 +180,11 @@ app.post('/user/accept-friend', (req, res) => {
     console.log("inviter:", inviter);
     const inviterPlayer = PlayerService.getPlayer(inviterId);
     console.log("inviterPlayer", inviterPlayer)
-    UserService.addUserToFriendList(userId, inviter);
+    await UserService.addUserToFriendList(userId, inviter);
     const user = UserService.getUserInfoWithId(userId);
     if (user) {
       console.log("user da var", user)
-      UserService.addUserToFriendList(inviterId, user);
+      await UserService.addUserToFriendList(inviterId, user);
 
       if (inviterPlayer) {
         console.log("inviterPlayer.socketId", inviterPlayer.socketId)
@@ -158,6 +192,7 @@ app.post('/user/accept-friend', (req, res) => {
         io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
           const player = {
             userId: friend.userId,
+            email: friend.email,
             nameSurname: friend.nameSurname,
             online: PlayerService.getPlayer(friend.userId)?.online || false
           };
