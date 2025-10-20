@@ -25,6 +25,7 @@ export class PlayerService {
   static updatePlayerPosition(
     userId: string,
     roomId: string,
+    socketId: string,
     position: { x: number; y: number; z: number },
     rotation: { x: number; y: number; z: number, w: number }
   ): void {
@@ -32,6 +33,7 @@ export class PlayerService {
     playerPositions.set(userId, {
       userId,
       roomId,
+      socketId,
       position,
       rotation,
       timestamp: Date.now()
@@ -45,10 +47,10 @@ export class PlayerService {
       timestamp: Date.now(),
       online,
     };
-    
+
     // Store socket ID mapping
     socketToUserId.set(socketId, userId);
-    
+
     playerPositions.set(userId, {
       userId,
       socketId,

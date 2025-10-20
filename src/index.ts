@@ -38,17 +38,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
 });
 
-app.post('/user/invite-friend', (req, res) => {
+app.post('/user/invite-friend', async (req, res) => {
   const { email, userId } = req.body;
   console.log("email, userId", email, userId)
   const myFriends = UserService.getUserInfoWithId(userId)?.friends || [];
-  const hasInvited = UserService.hasUserInvited(email, userId);
+  const hasInvited = await UserService.hasUserInvited(userId);
+  console.log("this", hasInvited)
   if (myFriends.find(friend => friend.email === email)) {
     res.status(403).json({ status: 403, message: 'User is already your friend' });
     return;
   }
 
-  if(hasInvited) {
+  if (hasInvited) {
     res.status(403).json({ status: 403, message: 'You have already invited this user' });
     return;
   }
@@ -80,6 +81,41 @@ app.post('/user/invite-friend', (req, res) => {
     res.status(200).json({ status: 200, message: 'Invitation sent' });
   } else {
     res.status(404).json({ status: 404, message: 'User not found' });
+  }
+});
+
+app.post("/user/reject-friend", (req, res) => {
+  const { inviterId, userId } = req.body;
+  UserService.removeUserFriendInvitation(userId, inviterId);
+  res.status(200).json({ status: 200, message: 'Invitation rejected successfully' });
+});
+
+app.post('/room/invite-friend', async (req, res) => {
+  const { email, roomId, userId } = req.body;
+  console.log("email, roomId", email, roomId)
+  const invitedUser = UserService.getUserInfoWithEmail(email);
+  if (invitedUser) {
+    const room = RoomService.getRoom(roomId);
+    if (room) {
+      room.invitedPlayers.set(invitedUser.userId, { nameSurname: invitedUser.nameSurname });
+      const isPlayerOnline = PlayerService.getPlayer(invitedUser.userId);
+      if (isPlayerOnline && isPlayerOnline.socketId) {
+        io.to(isPlayerOnline.socketId).emit('room:invitation-received', {
+          roomId: roomId,
+          inviterName: UserService.getUserInfoWithId(userId)?.nameSurname,
+          message: `${UserService.getUserInfoWithId(userId)?.nameSurname} sizi odaya davet etti!`,
+          timestamp: Date.now()
+        });
+      }
+      res.status(200).json({ status: 200, message: 'User invited to room' });
+      return;
+    } else {
+      res.status(404).json({ status: 404, message: 'Room not found' });
+      return;
+    }
+  } else {
+    res.status(404).json({ status: 404, message: 'User not found' });
+    return;
   }
 });
 
@@ -130,7 +166,7 @@ io.on('connection', (socket) => {
     userId: string, userName: string, online: boolean
   }) => {
     const invitations = UserService.getUserFriendInvitations(data.userId);
-    console.log("invitations:", invitations);
+    console.log("invitations for created:", invitations);
     const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, timestamp: Date.now(), online: data.online || true });
 
 
@@ -139,12 +175,31 @@ io.on('connection', (socket) => {
       return {
         userId: friend.userId,
         nameSurname: friend.nameSurname,
+        email: friend.email,
         online: PlayerService.getPlayer(friend.userId) ? true : false,
-        invitations: invitations
       };
     });
+
+
     console.log("player", friendsWithStatus);
-    socket.emit('player:created', { userId: player.userId, friends: friendsWithStatus });
+    socket.emit('player:created', {
+      userId: player.userId, friends: friendsWithStatus, invitations: invitations.map(invite => {
+        return {
+          userId: invite.userId,
+          nameSurname: invite.nameSurname,
+          email: invite.email,
+          online: PlayerService.getPlayer(invite.userId) ? true : false,
+        };
+      })
+    });
+    if (player.online) {
+      friendsWithStatus.forEach(friend => {
+        io.to(PlayerService.getPlayer(friend.userId)?.socketId || '').emit('friend:status-changed', {
+          userId: player.userId,
+          online: player.online,
+        });
+      });
+    }
   });
 
   // Listen for player position updates
@@ -159,6 +214,7 @@ io.on('connection', (socket) => {
     PlayerService.updatePlayerPosition(
       data.userId,
       data.roomId,
+      socket.id,
       data.position,
       data.rotation
     );

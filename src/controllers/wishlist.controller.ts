@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { WishlistService } from "@services/wishlist.service";
 import { IAddToCartItem } from "src/types/cart/CartItem";
+import { addToCart } from "./cart.controller";
 
 export async function addToWishlist(req: Request, res: Response) {
     const user = req.user;
@@ -17,11 +18,15 @@ export async function addToWishlist(req: Request, res: Response) {
     }
 
     WishlistService.addToWishlist(user.userId, item);
+    const isAddedToCart = await addToCart(req, res);
+    if(!isAddedToCart.success){
+        return res.status(500).json({ error: "Failed to add item to cart" });
+    }
 
     return res.status(200).json({
         success: true,
         message: "Item added to wishlist",
-        data: WishlistService.getWishlist(user.userId)
+        data: isAddedToCart.data
     });
 }
 

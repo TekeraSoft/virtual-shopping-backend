@@ -2,6 +2,7 @@ export interface IRoom {
     roomId: string;
     timestamp: number;
     players: Map<string, { socketId: string; nameSurname: string }>;
+    invitedPlayers: Map<string, { nameSurname: string }>;
 }
 
 // Global state: socketId -> player data
@@ -15,6 +16,7 @@ export class RoomService {
             roomId: roomId,
             timestamp: Date.now(),
             players: new Map([[userId, { socketId, nameSurname }]]),
+            invitedPlayers: new Map(),
         };
         rooms.set(roomId, newRoom);
         return newRoom;

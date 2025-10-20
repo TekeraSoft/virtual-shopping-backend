@@ -64,8 +64,18 @@ export class UserService {
     static getUserFriendInvitations(userId: string): IUserPayload[] {
         return this.friendInvitations.get(userId) || [];
     }
-    static hasUserInvited(email: string, userId: string): boolean {
+    static async hasUserInvited(userId: string): Promise<boolean> {
+        
+        for (const [, value] of this.friendInvitations) {
+            if (value.find(invited => invited.userId === userId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    static removeUserFriendInvitation(userId: string, inviterId: string): void {
         const invitations = this.friendInvitations.get(userId) || [];
-        return invitations.some(invitation => invitation.email === email);
+        const updatedInvitations = invitations.filter(invite => invite.userId !== inviterId);
+        this.friendInvitations.set(userId, updatedInvitations);
     }
 }
