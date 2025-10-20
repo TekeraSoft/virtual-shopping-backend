@@ -277,7 +277,7 @@ io.on('connection', (socket) => {
         userId: friend.userId,
         nameSurname: friend.nameSurname,
         email: friend.email,
-        online: PlayerService.getPlayer(friend.userId) ? true : false,
+        online: PlayerService.getPlayer(friend.userId)?.online || false,
       };
     });
 
@@ -289,7 +289,7 @@ io.on('connection', (socket) => {
           userId: invite.userId,
           nameSurname: invite.nameSurname,
           email: invite.email,
-          online: PlayerService.getPlayer(invite.userId) ? true : false,
+          online: PlayerService.getPlayer(invite.userId)?.online || false,
         };
       })
     });
