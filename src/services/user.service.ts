@@ -51,7 +51,7 @@ export class UserService {
             }
             : null;
     }
-    static addUserFriend(userId: string, friend: IUserPayload): void {
+    static addUserToFriendList(userId: string, friend: IUserPayload): void {
         const friends = this.userFriends.get(userId) || [];
         friends.push(friend);
         this.userFriends.set(userId, friends);

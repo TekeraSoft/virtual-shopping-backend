@@ -40,10 +40,27 @@ app.get('/health', (req, res) => {
 
 app.post('/user/invite-friend', async (req, res) => {
   const { email, userId } = req.body;
-  console.log("email, userId", email, userId)
+
+  const metaUser = UserService.getUserInfoWithId(userId);
+  if (!metaUser) {
+    res.status(404).json({ status: 404, message: 'Kullanıcı bulunamadı.' });
+    return;
+  }
   const myFriends = UserService.getUserInfoWithId(userId)?.friends || [];
+  const invitedUser = UserService.getUserInfoWithEmail(email);
+  if (!invitedUser) {
+    res.status(404).json({ status: 404, message: 'Davet edilen kullanıcı bulunamadı.' });
+    return;
+  }
+  const invitedUserInviteMe = await UserService.hasUserInvited(invitedUser.userId);
+  if (invitedUserInviteMe) {
+    UserService.addUserToFriendList(userId, invitedUser);
+    UserService.addUserToFriendList(invitedUser.userId, metaUser);
+    res.status(200).json({ status: 200, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.' });
+    return;
+  }
   const hasInvited = await UserService.hasUserInvited(userId);
-  console.log("this", hasInvited)
+
   if (myFriends.find(friend => friend.email === email)) {
     res.status(403).json({ status: 403, message: 'User is already your friend' });
     return;
@@ -129,11 +146,11 @@ app.post('/user/accept-friend', (req, res) => {
     console.log("inviter:", inviter);
     const inviterPlayer = PlayerService.getPlayer(inviterId);
     console.log("inviterPlayer", inviterPlayer)
-    UserService.addUserFriend(userId, inviter);
+    UserService.addUserToFriendList(userId, inviter);
     const user = UserService.getUserInfoWithId(userId);
     if (user) {
       console.log("user da var", user)
-      UserService.addUserFriend(inviterId, user);
+      UserService.addUserToFriendList(inviterId, user);
 
       if (inviterPlayer) {
         console.log("inviterPlayer.socketId", inviterPlayer.socketId)
@@ -168,9 +185,14 @@ io.on('connection', (socket) => {
     const invitations = UserService.getUserFriendInvitations(data.userId);
     console.log("invitations for created:", invitations);
     const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, timestamp: Date.now(), online: data.online || true });
-
-
     const playerFriends = UserService.getUserInfoWithId(data.userId)?.friends || [];
+
+    const invitationsExcludeFriend = invitations.filter(invite => {
+      return playerFriends.find(friend => friend.userId !== invite.userId);
+    });
+
+    console.log("invitationsExcludeFriend", invitationsExcludeFriend);
+
     const friendsWithStatus = playerFriends.map(friend => {
       return {
         userId: friend.userId,
@@ -183,7 +205,7 @@ io.on('connection', (socket) => {
 
     console.log("player", friendsWithStatus);
     socket.emit('player:created', {
-      userId: player.userId, friends: friendsWithStatus, invitations: invitations.map(invite => {
+      userId: player.userId, friends: friendsWithStatus, invitations: invitationsExcludeFriend.map(invite => {
         return {
           userId: invite.userId,
           nameSurname: invite.nameSurname,
