@@ -1,74 +1,84 @@
 
 import { Request, Response } from "express";
 import { WishlistService } from "@services/wishlist.service";
-import { IAddToCartItem } from "src/types/cart/CartItem";
-import { addToCart } from "./cart.controller";
+import { addToCart, deleteFromCart, getCartItems } from "./cart.controller";
+import { IAddToCartItem } from "src/schemas/cart.scheme";
 
 export async function addToWishlist(req: Request, res: Response) {
     const user = req.user;
 
     if (!user || !user.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(401).json({ error: "Unauthorized" });
+        return;
     }
 
     const item: IAddToCartItem = req.body;
 
     if (!item || !item.productId) {
-        return res.status(400).json({ error: "Invalid item data" });
+        res.status(400).json({ error: "Invalid item data" });
+        return;
     }
 
-    WishlistService.addToWishlist(user.userId, item);
-    const isAddedToCart = await addToCart(req, res);
-    if(!isAddedToCart.success){
-        return res.status(500).json({ error: "Failed to add item to cart" });
-    }
 
-    return res.status(200).json({
+    const isAddedToCart = await addToCart(req);
+    if (!isAddedToCart.success || !isAddedToCart.data) {
+        res.status(500).json({ error: "Failed to add item to cart" });
+        return;
+    }
+    WishlistService.addToWishlist(user.userId, isAddedToCart.data);
+    res.status(200).json({
         success: true,
         message: "Item added to wishlist",
         data: isAddedToCart.data
     });
+    return;
 }
 
 export async function getWishlist(req: Request, res: Response) {
 
     const wishlistUserId = req.query.wishListId as string;
     if (!wishlistUserId) {
-        return res.status(400).json({ error: "wishListId query parameter is required" });
+        res.status(400).json({ error: "wishListId query parameter is required" });
+        return;
     }
 
     const wishlist = WishlistService.getWishlist(wishlistUserId);
-
-    return res.status(200).json({ success: true, wishlist });
+    res.status(200).json({ success: true, wishlist });
+    return;
 }
 
 export async function removeFromWishlist(req: Request, res: Response) {
     const user = req.user;
 
     if (!user || !user.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(401).json({ error: "Unauthorized" });
+        return;
     }
 
-    const { productId, variationId, attributeId } = req.body;
+    const { attributeId } = req.body;
 
-    if (!productId) {
-        return res.status(400).json({ error: "Product ID is required" });
+    const isDeletedFromCart = await deleteFromCart(req, attributeId);
+    if (!isDeletedFromCart.success) {
+        res.status(500).json({ error: "Failed to remove item from cart" });
+        return;
     }
 
-    const removed = WishlistService.removeFromWishlist(
-        user.userId,
-        productId,
-        variationId,
-        attributeId
-    );
+    const cart = await getCartItems(req);
+    if (!cart.success || !cart.data) {
+        res.status(500).json({ error: "Failed to retrieve cart items" });
+        return;
+    }
+
+    const removed = WishlistService.removeFromWishlist(user.userId, cart.data);
 
     if (removed) {
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             message: "Item removed from wishlist",
             data: WishlistService.getWishlist(user.userId)
         });
+        return;
     }
-
-    return res.status(404).json({ error: "Item not found in wishlist" });
+    res.status(404).json({ error: "Item not found in wishlist" });
+    return;
 }

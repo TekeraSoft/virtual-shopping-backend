@@ -1,8 +1,8 @@
-import { Request, Response } from "express";
+import { Request } from "express";
 import { api_base_url } from "src/lib/urls";
-import { IAddToCartItem } from "src/types/cart/CartItem";
+import { IAddToCartItem, ICart } from "src/schemas/cart.scheme";
 
-export async function addToCart(req: Request, res: Response) {
+export async function addToCart(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
     const cartItem: IAddToCartItem = req.body;
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
@@ -24,5 +24,44 @@ export async function addToCart(req: Request, res: Response) {
     } catch (error: Error | any) {
 
         return { success: false, message: error.message || "Ürün sepete eklenemedi.", data: null };
+    }
+}
+
+export async function deleteFromCart(req: Request, attributeId: string): Promise<{ success: boolean; message: string; data: any | null }> {
+    const authHeader = req.header("Authorization");
+    const token = authHeader ? authHeader.split(" ")[1] : null;
+    try {
+        const response = await fetch(`/cart/removeFromCart?attributeId=${attributeId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
+
+        });
+        const data = await response.json();
+        return { success: true, message: data.message || "", data: data };
+    } catch (error: any) {
+        return { success: false, message: error.message || "Ürün sepete eklenemedi.", data: null };
+    }
+}
+
+export async function getCartItems(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
+    const user = req.user;
+    const authHeader = req.header("Authorization");
+    const token = authHeader ? authHeader.split(" ")[1] : null;
+
+    if (!user) {
+        return { success: true, message: "", data: { cartItems: [], totalPrice: 0, itemCount: 0, shippingPrice: 0, id: "", sellerCampaigns: [] } };
+    }
+    try {
+        const response = await fetch(`/cart/getCart`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
+
+        });
+        const data = await response.json();
+
+        return { success: true, message: data.message, data: data as ICart };
+    } catch (error: any) {
+
+        return { success: false, message: error.message || "Sepet verileri alınamadı.", data: null };
     }
 }

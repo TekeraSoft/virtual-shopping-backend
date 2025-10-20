@@ -36,6 +36,7 @@ app.use('/wishlist', wishlistRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
+  return;
 });
 
 app.post('/user/invite-friend', async (req, res) => {
@@ -173,40 +174,82 @@ app.post('/room/invite-friend', async (req, res) => {
 
 app.post('/user/accept-friend', async (req, res) => {
   const { inviterId, userId } = req.body;
+
   console.log("inviterId, userId", inviterId, userId)
   const myInvitations = UserService.getUserFriendInvitations(userId);
+
   console.log("myInvitations:", myInvitations);
   const inviter = myInvitations.find(invite => invite.userId === inviterId);
   if (inviter) {
     console.log("inviter:", inviter);
-    const inviterPlayer = PlayerService.getPlayer(inviterId);
-    console.log("inviterPlayer", inviterPlayer)
-    await UserService.addUserToFriendList(userId, inviter);
-    const user = UserService.getUserInfoWithId(userId);
-    if (user) {
-      console.log("user da var", user)
-      await UserService.addUserToFriendList(inviterId, user);
 
-      if (inviterPlayer) {
-        console.log("inviterPlayer.socketId", inviterPlayer.socketId)
-        const playerFriends = UserService.getUserInfoWithId(inviterId)?.friends || [];
-        io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
-          const player = {
-            userId: friend.userId,
-            email: friend.email,
-            nameSurname: friend.nameSurname,
-            online: PlayerService.getPlayer(friend.userId)?.online || false
-          };
-          return player;
-        }));
-      }
+    const inviterPlayer = PlayerService.getPlayer(inviterId);
+    const invitedPlayer = PlayerService.getPlayer(userId);
+
+    const user = UserService.getUserInfoWithId(userId);
+
+    if (!user) {
+      res.status(404).json({ status: 404, message: 'User not found' });
+      return;
     }
 
+
+    await UserService.addUserToFriendList(userId, inviter);
+    await UserService.addUserToFriendList(inviterId, user);
+
+    if (inviterPlayer) {
+      console.log("inviterPlayer.socketId", inviterPlayer.socketId)
+      const playerFriends = UserService.getUserInfoWithId(inviterId)?.friends || [];
+      io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+        const player = {
+          userId: friend.userId,
+          email: friend.email,
+          nameSurname: friend.nameSurname,
+          online: PlayerService.getPlayer(friend.userId)?.online || false
+        };
+        return player;
+      }));
+    }
+    if (invitedPlayer) {
+      console.log("invitedPlayer.socketId", invitedPlayer.socketId)
+      const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
+      io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+        const player = {
+          userId: friend.userId,
+          email: friend.email,
+          nameSurname: friend.nameSurname,
+          online: PlayerService.getPlayer(friend.userId)?.online || false
+        };
+        return player;
+      }));
+    }
 
     res.status(200).json({ status: 200, message: 'Friend added successfully' });
   } else {
     res.status(403).json({ status: 403, message: 'Invitation not found' });
   }
+});
+
+app.post('/user/change-online-status', async (req, res) => {
+  const { userId, online } = req.body;
+  console.log("userId, online", userId, online)
+  PlayerService.setPlayerOnlineStatus(userId, online);
+
+
+  // Notify friends about status change
+  const userFriends = UserService.getUserInfoWithId(userId)?.friends || [];
+  userFriends.forEach(friend => {
+    const friendPlayer = PlayerService.getPlayer(friend.userId);
+    if (friendPlayer && friendPlayer.socketId) {
+      io.to(friendPlayer.socketId).emit('friend:status-changed', {
+        userId: userId,
+        online: online,
+      });
+    }
+  });
+
+
+  res.status(200).json({ status: 200, message: 'Online status changed successfully' });
 });
 
 io.on('connection', (socket) => {

@@ -1,47 +1,24 @@
-import { IAddToCartItem } from "../types/cart/CartItem";
+import { IAddToCartItem, ICart } from "src/schemas/cart.scheme";
 
-const wishlistStore: Map<string, IAddToCartItem[]> = new Map();
+const wishlistStore: Map<string, ICart> = new Map();
 
 export class WishlistService {
 
-  static addToWishlist(userId: string, item: IAddToCartItem): void {
-    const userWishlist = wishlistStore.get(userId) || [];
-
-    const existingIndex = userWishlist.findIndex(
-      (i) => i.productId === item.productId &&
-        i.variationId === item.variationId &&
-        i.attributeId === item.attributeId
-    );
-
-    if (existingIndex === -1) {
-      userWishlist.push(item);
-      wishlistStore.set(userId, userWishlist);
-    } else {
-      userWishlist[existingIndex].quantity = item.quantity;
-      wishlistStore.set(userId, userWishlist);
-    }
+  static addToWishlist(userId: string, item: ICart): void {
+    wishlistStore.set(userId, item);
   }
 
 
-  static getWishlist(userId: string): IAddToCartItem[] {
-    return wishlistStore.get(userId) || [];
+  static getWishlist(userId: string): ICart | null {
+    return wishlistStore.get(userId) || null;
   }
 
 
-  static removeFromWishlist(userId: string, productId: string, variationId: string, attributeId: string): boolean {
-    const userWishlist = wishlistStore.get(userId) || [];
+  static removeFromWishlist(userId: string, cart: ICart): boolean {
 
-    const newWishlist = userWishlist.filter(
-      (item) => !(item.productId === productId &&
-        item.variationId === variationId &&
-        item.attributeId === attributeId)
-    );
+    wishlistStore.set(userId, cart);
 
-    if (newWishlist.length < userWishlist.length) {
-      wishlistStore.set(userId, newWishlist);
-      return true;
-    }
-    return false;
+    return true;
   }
 
 
@@ -50,7 +27,7 @@ export class WishlistService {
   }
 
 
-  static getAllWishlists(): Map<string, IAddToCartItem[]> {
+  static getAllWishlists(): Map<string, ICart> {
     return wishlistStore;
   }
 }

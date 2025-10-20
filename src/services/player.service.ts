@@ -1,6 +1,6 @@
-export interface PlayerPosition {
+export interface IPlayer {
   userId: string;
-  socketId?: string;
+  socketId: string;
   roomId: string;
   online?: boolean;
   position: { x: number; y: number; z: number };
@@ -16,7 +16,7 @@ interface ICreatePlayer {
 }
 
 // Global state: userId -> player data
-const playerPositions: Map<string, PlayerPosition> = new Map();
+const players: Map<string, IPlayer> = new Map();
 // Socket ID to User ID mapping
 const socketToUserId: Map<string, string> = new Map();
 
@@ -30,7 +30,7 @@ export class PlayerService {
     rotation: { x: number; y: number; z: number, w: number }
   ): void {
     // console.log("player updated:", { socketId, userId, roomId, position, rotation });
-    playerPositions.set(userId, {
+    players.set(userId, {
       userId,
       roomId,
       socketId,
@@ -51,7 +51,7 @@ export class PlayerService {
     // Store socket ID mapping
     socketToUserId.set(socketId, userId);
 
-    playerPositions.set(userId, {
+    players.set(userId, {
       userId,
       socketId,
       roomId: "",
@@ -63,18 +63,18 @@ export class PlayerService {
     return newPlayer;
   }
   // Get all active players
-  static getAllPlayers(): PlayerPosition[] {
-    return Array.from(playerPositions.values());
+  static getAllPlayers(): IPlayer[] {
+    return Array.from(players.values());
   }
 
   // Get player by socket ID
-  static getPlayer(userId: string): PlayerPosition | undefined {
-    return playerPositions.get(userId);
+  static getPlayer(userId: string): IPlayer | undefined {
+    return players.get(userId);
   }
 
   // Get player's socket ID
   static getPlayerSocketId(userId: string): string | undefined {
-    const player = playerPositions.get(userId);
+    const player = players.get(userId);
     return player?.socketId;
   }
 
@@ -85,16 +85,16 @@ export class PlayerService {
 
   // Remove player (on disconnect)
   static removePlayer(userId: string): void {
-    const player = playerPositions.get(userId);
+    const player = players.get(userId);
     if (player?.socketId) {
       socketToUserId.delete(player.socketId);
     }
-    playerPositions.delete(userId);
+    players.delete(userId);
   }
 
   // Get total player count
   static getPlayerCount(): number {
-    return playerPositions.size;
+    return players.size;
   }
 
   // Clear inactive players (optional cleanup)
@@ -102,13 +102,22 @@ export class PlayerService {
     const now = Date.now();
     let removed = 0;
 
-    for (const [socketId, player] of playerPositions.entries()) {
+    for (const [socketId, player] of players.entries()) {
       if (now - player.timestamp > timeoutMs) {
-        playerPositions.delete(socketId);
+        players.delete(socketId);
         removed++;
       }
     }
 
     return removed;
+  }
+
+  static setPlayerOnlineStatus(userId: string, online: boolean): void {
+    const player = players.get(userId);
+    if (player) {
+      player.online = online;
+      player.timestamp = Date.now();
+      players.set(userId, player);
+    }
   }
 }
