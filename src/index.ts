@@ -213,6 +213,7 @@ app.post('/user/accept-friend', async (req, res) => {
     if (invitedPlayer) {
       console.log("invitedPlayer.socketId", invitedPlayer.socketId)
       const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
+      
       io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
         const player = {
           userId: friend.userId,
@@ -262,6 +263,7 @@ io.on('connection', (socket) => {
     userId: string, userName: string, online: boolean
   }) => {
     const invitations = UserService.getUserFriendInvitations(data.userId);
+    console.log("player:create", data.userId, data.userName, data.online)
     console.log("invitations for created:", invitations);
     const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, timestamp: Date.now(), online: data.online || true });
     const playerFriends = UserService.getUserInfoWithId(data.userId)?.friends || [];
