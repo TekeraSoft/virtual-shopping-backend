@@ -57,7 +57,7 @@ app.post('/user/invite-friend', async (req, res) => {
     res.status(404).json({ status: 404, message: 'Davet edilen kullanıcı bulunamadı.' });
     return;
   }
-  const invitedUserInviteMe = await UserService.hasUserInvited(invitedUser.userId);
+  const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.email);
   if (invitedUserInviteMe) {
     await UserService.addUserToFriendList(userId, invitedUser);
     await UserService.addUserToFriendList(invitedUser.userId, metaUser);
@@ -66,8 +66,7 @@ app.post('/user/invite-friend', async (req, res) => {
     if (inviterPlayer) {
       console.log("inviterPlayer.socketId", inviterPlayer.socketId)
       const playerFriends = UserService.getUserInfoWithId(inviterPlayer.userId)?.friends || [];
-      console.log("playerFriends inviterPlayer", playerFriends)
-      io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+      const playerFriendList = playerFriends.map((friend) => {
         const player = {
           userId: friend.userId,
           email: friend.email,
@@ -75,13 +74,15 @@ app.post('/user/invite-friend', async (req, res) => {
           online: PlayerService.getPlayer(friend.userId)?.online || false
         };
         return player;
-      }));
+      });
+
+      console.log("playerFriendList invitedPlayer", playerFriendList)
+      io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriendList);
     }
     if (invitedPlayer) {
       console.log("invitedPlayer.socketId", invitedPlayer.socketId)
       const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
-      console.log("playerFriends invitedPlayer", playerFriends)
-      io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+      const playerFriendList = playerFriends.map((friend) => {
         const player = {
           userId: friend.userId,
           email: friend.email,
@@ -89,17 +90,17 @@ app.post('/user/invite-friend', async (req, res) => {
           online: PlayerService.getPlayer(friend.userId)?.online || false
         };
         return player;
-      }));
+      });
+
+      console.log("playerFriendList invitedPlayer", playerFriendList)
+      io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriendList);
     }
 
 
-    res.status(200).json({ status: 200, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
+    res.status(201).json({ status: 201, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
     return;
   }
-  const hasInvited = await UserService.hasUserInvited(userId);
-
-
-
+  const hasInvited = await UserService.hasUserInvited(userId, email);
   if (hasInvited) {
     res.status(403).json({ status: 403, message: 'You have already invited this user' });
     return;
@@ -238,7 +239,7 @@ io.on('connection', (socket) => {
     });
 
 
-    console.log("player", friendsWithStatus);
+    console.log("player friendsWithStatus", friendsWithStatus);
     socket.emit('player:created', {
       userId: player.userId, friends: friendsWithStatus, invitations: invitationsExcludeFriend.map(invite => {
         return {
