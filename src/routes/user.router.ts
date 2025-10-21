@@ -2,24 +2,30 @@ import { Router } from 'express';
 import { PlayerService } from '@services/player.service';
 import { UserService } from '@services/user.service';
 import { responseTypes } from 'src/lib/responseTypes';
+import { authenticate } from '@middlewares/authtenticate.checker';
 
 const userRouter = Router();
 
 // Add item to wishlist
-userRouter.post('/invite-friend', async (req, res) => {
-    const { email, userId } = req.body;
+userRouter.post('/invite-friend', authenticate, async (req, res) => {
+    const { email } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
     const io = req.io;
     if (!io) {
         res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
         return;
     }
 
-    const metaUser = UserService.getUserInfoWithId(userId);
+    const metaUser = UserService.getUserInfoWithId(user.userId);
     if (!metaUser) {
         res.status(422).json({ responseType: responseTypes.userNotFound, message: 'Kullanıcı bulunamadı.' });
         return;
     }
-    const myFriends = await UserService.getUserFriends(userId);
+    const myFriends = await UserService.getUserFriends(user.userId) || [];
 
     if (myFriends.find(friend => friend.email === email)) {
         res.status(403).json({ responseType: responseTypes.userAlreadyFriend, message: 'User is already your friend' });
@@ -33,10 +39,10 @@ userRouter.post('/invite-friend', async (req, res) => {
     const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.userId);
     if (invitedUserInviteMe) {
         console.log("inviteduser invite me")
-        await UserService.addUserToFriendList(userId, invitedUser);
+        await UserService.addUserToFriendList(user.userId, invitedUser);
         await UserService.addUserToFriendList(invitedUser.userId, metaUser);
         const inviterPlayer = PlayerService.getPlayer(invitedUser.userId);
-        const invitedPlayer = PlayerService.getPlayer(userId);
+        const invitedPlayer = PlayerService.getPlayer(user.userId);
         if (inviterPlayer) {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
             const playerFriends = await UserService.getUserFriends(inviterPlayer.userId);
@@ -81,7 +87,7 @@ userRouter.post('/invite-friend', async (req, res) => {
     }
 
     const userInvited = UserService.getUserInfoWithEmail(email)
-    const userInviter = UserService.getUserInfoWithId(userId);
+    const userInviter = UserService.getUserInfoWithId(user.userId);
     if (userInvited && userInviter) {
         console.log("userInvited ve inviter var")
         await UserService.inviteUserFriend(userInvited.userId, userInviter);
@@ -109,11 +115,16 @@ userRouter.post('/invite-friend', async (req, res) => {
     }
 });
 
-userRouter.post("/reject-friend", async (req, res) => {
-    const { inviterId, userId } = req.body;
+userRouter.post("/reject-friend", authenticate, async (req, res) => {
+    const { inviterId } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
 
     try {
-        await UserService.removeUserFriendInvitation(userId, inviterId);
+        await UserService.removeUserFriendInvitation(user.userId, inviterId);
         res.status(200).json({ responseType: responseTypes.invitationRejected, message: 'Invitation rejected successfully' });
     } catch (error) {
         res.status(403).json({ responseType: responseTypes.invitationCannotRejected, message: 'Invitation cannot be rejected' });
@@ -121,16 +132,21 @@ userRouter.post("/reject-friend", async (req, res) => {
 
 });
 
-userRouter.post('/accept-friend', async (req, res) => {
-    const { inviterId, userId } = req.body;
+userRouter.post('/accept-friend', authenticate, async (req, res) => {
+    const { inviterId } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
     const io = req.io;
     if (!io) {
         res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
         return;
     }
 
-    console.log("inviterId, userId", inviterId, userId)
-    const myInvitations = await UserService.getUserFriendInvitations(userId);
+    console.log("inviterId, userId", inviterId, user.userId)
+    const myInvitations = await UserService.getUserFriendInvitations(user.userId);
 
     console.log("myInvitations:", myInvitations);
     const inviter = myInvitations.find(invite => invite.userId === inviterId);
@@ -138,9 +154,7 @@ userRouter.post('/accept-friend', async (req, res) => {
         console.log("inviter:", inviter);
 
         const inviterPlayer = PlayerService.getPlayer(inviterId);
-        const invitedPlayer = PlayerService.getPlayer(userId);
-
-        const user = UserService.getUserInfoWithId(userId);
+        const invitedPlayer = PlayerService.getPlayer(user.userId);
 
         if (!user) {
             res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found' });
@@ -148,7 +162,7 @@ userRouter.post('/accept-friend', async (req, res) => {
         }
 
 
-        await UserService.addUserToFriendList(userId, inviter);
+        await UserService.addUserToFriendList(user.userId, inviter);
         await UserService.addUserToFriendList(inviterId, user);
 
         if (inviterPlayer) {
@@ -185,7 +199,7 @@ userRouter.post('/accept-friend', async (req, res) => {
     }
 });
 
-userRouter.post('/change-online-status', async (req, res) => {
+userRouter.post('/change-online-status', authenticate, async (req, res) => {
     const { userId, online } = req.body;
     const io = req.io;
     if (!io) {
