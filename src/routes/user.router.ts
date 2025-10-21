@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { authenticate } from '@middlewares/authtenticate.checker';
 import { PlayerService } from '@services/player.service';
 import { UserService } from '@services/user.service';
 import { responseTypes } from 'src/lib/responseTypes';
@@ -14,9 +13,6 @@ userRouter.post('/invite-friend', async (req, res) => {
         res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
         return;
     }
-
-    const players = PlayerService.getAllPlayers();
-    console.log("players", players)
 
     const metaUser = UserService.getUserInfoWithId(userId);
     if (!metaUser) {
