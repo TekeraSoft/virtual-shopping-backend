@@ -31,7 +31,7 @@ export async function deleteFromCart(req: Request, attributeId: string): Promise
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
     try {
-        const response = await fetch(`/cart/removeFromCart?attributeId=${attributeId}`, {
+        const response = await fetch(api_base_url + `/cart/removeFromCart?attributeId=${attributeId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
 
@@ -46,19 +46,21 @@ export async function deleteFromCart(req: Request, attributeId: string): Promise
 export async function getCartItems(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
-
+    console.log("token", token);
 
     try {
-        const response = await fetch(`/cart/getCart`, {
+        const response = await fetch(api_base_url + `/cart/getCart`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
 
         });
         const data = await response.json();
 
+        console.log("data in getcartitems", data)
+
         return { success: true, message: data.message, data: data as ICart };
     } catch (error: any) {
-
+        console.log("error get cart items", error)
         return { success: false, message: error.message || "Sepet verileri alınamadı.", data: null };
     }
 }

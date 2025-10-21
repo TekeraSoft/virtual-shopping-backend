@@ -198,27 +198,56 @@ userRouter.post('/accept-friend', authenticate, async (req, res) => {
         res.status(403).json({ responseType: responseTypes.invitationNotFound, message: 'Invitation not found' });
     }
 });
-
-userRouter.post('/change-online-status', authenticate, async (req, res) => {
-    const { userId, online } = req.body;
+userRouter.delete('/remove-friend', authenticate, async (req, res) => {
+    const friendId = req.query.friendId as string;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
     const io = req.io;
     if (!io) {
         res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
         return;
     }
 
-    console.log("userId, online", userId, online)
     try {
-        PlayerService.setPlayerOnlineStatus(userId, online);
+        await UserService.removeFriend(user.userId);
+        res.status(200).json({ responseType: responseTypes.friendRemoved, message: 'Friend removed successfully.' });
+        return;
+    } catch (error) {
+        console.error('Error removing friend:', error);
+        res.status(500).json({ responseType: responseTypes.friendRemoveFailed, message: 'Friend could not be removed.' });
+        return;
+    }
+
+});
+
+userRouter.post('/change-online-status', authenticate, async (req, res) => {
+    const { online } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
+    const io = req.io;
+    if (!io) {
+        res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
+        return;
+    }
+
+    console.log("userId, online", user.userId, online)
+    try {
+        PlayerService.setPlayerOnlineStatus(user.userId, online);
 
 
         // Notify friends about status change
-        const userFriends = await UserService.getUserFriends(userId);
+        const userFriends = await UserService.getUserFriends(user.userId);
         userFriends.forEach(friend => {
             const friendPlayer = PlayerService.getPlayer(friend.userId);
             if (friendPlayer && friendPlayer.socketId) {
                 io.to(friendPlayer.socketId).emit('friend:status-changed', {
-                    userId: userId,
+                    userId: user.userId,
                     online: online,
                 });
             }

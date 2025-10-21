@@ -19,5 +19,7 @@ export const responseTypes = {
     userAlreadyInRoom: "USER_ALREADY_IN_ROOM",
     userAlreadyInvitedToRoom: "USER_ALREADY_INVITED_TO_ROOM",
     onlineStatusChanged: "ONLINE_STATUS_CHANGED",
-    onlineStatusCannotChanged: "ONLINE_STATUS_CANNOT_CHANGED"
+    onlineStatusCannotChanged: "ONLINE_STATUS_CANNOT_CHANGED",
+    friendRemoveFailed: "FRIEND_REMOVE_FAILED",
+    friendRemoved: "FRIEND_REMOVED",
 }

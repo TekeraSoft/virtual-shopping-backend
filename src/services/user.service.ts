@@ -89,10 +89,10 @@ export class UserService {
             // userId is the invited user's id in the old signature; friend.userId is inviter
             await InvitationService.createInvitation(friend.userId, userId);
 
-            // Keep in-memory for compatibility
-            const invitations = this.friendInvitations.get(userId) || [];
-            invitations.push(friend);
-            this.friendInvitations.set(userId, invitations);
+            // // Keep in-memory for compatibility
+            // const invitations = this.friendInvitations.get(userId) || [];
+            // invitations.push(friend);
+            // this.friendInvitations.set(userId, invitations);
         } catch (error) {
             throw error;
         }
@@ -170,6 +170,15 @@ export class UserService {
         } catch (error) {
             console.error('Error fetching friends from DB:', error);
             throw new Error('Failed to fetch user friends.');
+        }
+    }
+    static async removeFriend(userId: string): Promise<boolean> {
+        try {
+            const docs = await Friend.findOneAndDelete({ friendId: userId }).lean();
+            return true;
+        } catch (error) {
+            console.error('Error fetching friends from DB:', error);
+            throw new Error('Arkadaşın silinemedi. Belki de hiç arkadaşın olmadı );');
         }
     }
     private static mapFriendsToPayload(docs: any[]): IUserPayload[] {

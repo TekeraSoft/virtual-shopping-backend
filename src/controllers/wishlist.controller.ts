@@ -57,7 +57,7 @@ export async function getMyWishlist(req: Request, res: Response) {
 
     const cart = await getCartItems(req);
     if (!cart.success || !cart.data) {
-        res.status(500).json({ error: "Failed to retrieve cart items" });
+        res.status(500).json({ error: "Failed to retrieve my cart items" });
         return;
     }
     res.status(200).json({ success: true, wishlist: cart.data });
