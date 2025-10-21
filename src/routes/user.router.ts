@@ -30,7 +30,7 @@ userRouter.post('/invite-friend', async (req, res) => {
         res.status(404).json({ responseType: responseTypes.invitedUserNotFound, message: 'Davet edilen kullanıcı bulunamadı.' });
         return;
     }
-    const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.email);
+    const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.userId);
     if (invitedUserInviteMe) {
         console.log("inviteduser invite me")
         await UserService.addUserToFriendList(userId, invitedUser);
@@ -39,7 +39,7 @@ userRouter.post('/invite-friend', async (req, res) => {
         const invitedPlayer = PlayerService.getPlayer(userId);
         if (inviterPlayer) {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
-            const playerFriends = UserService.getUserInfoWithId(inviterPlayer.userId)?.friends || [];
+            const playerFriends = await UserService.getUserFriends(inviterPlayer.userId);
             const playerFriendList = playerFriends.map((friend) => {
                 const player = {
                     userId: friend.userId,
@@ -55,7 +55,7 @@ userRouter.post('/invite-friend', async (req, res) => {
         }
         if (invitedPlayer) {
             console.log("invitedPlayer.socketId", invitedPlayer.socketId)
-            const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
+            const playerFriends = await UserService.getUserFriends(invitedPlayer.userId) || [];
             const playerFriendList = playerFriends.map((friend) => {
                 const player = {
                     userId: friend.userId,
@@ -74,7 +74,7 @@ userRouter.post('/invite-friend', async (req, res) => {
         res.status(201).json({ responseType: responseTypes.invitationTwoDirectional, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
         return;
     }
-    const hasInvited = await UserService.hasUserInvited(invitedUser.userId, metaUser.email);
+    const hasInvited = await UserService.hasUserInvited(invitedUser.userId, metaUser.userId);
     if (hasInvited) {
         res.status(409).json({ responseType: responseTypes.friendRequestAlreadySent, message: 'You have already invited this user' });
         return;
@@ -84,7 +84,7 @@ userRouter.post('/invite-friend', async (req, res) => {
     const userInviter = UserService.getUserInfoWithId(userId);
     if (userInvited && userInviter) {
         console.log("userInvited ve inviter var")
-    await UserService.inviteUserFriend(userInvited.userId, userInviter);
+        await UserService.inviteUserFriend(userInvited.userId, userInviter);
 
         // Check if invited user is online and send socket notification
         const invitedPlayer = PlayerService.getPlayer(userInvited.userId);
@@ -140,7 +140,7 @@ userRouter.post('/accept-friend', async (req, res) => {
         const inviterPlayer = PlayerService.getPlayer(inviterId);
         const invitedPlayer = PlayerService.getPlayer(userId);
 
-    const user = UserService.getUserInfoWithId(userId);
+        const user = UserService.getUserInfoWithId(userId);
 
         if (!user) {
             res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found' });
@@ -148,8 +148,8 @@ userRouter.post('/accept-friend', async (req, res) => {
         }
 
 
-    await UserService.addUserToFriendList(userId, inviter);
-    await UserService.addUserToFriendList(inviterId, user);
+        await UserService.addUserToFriendList(userId, inviter);
+        await UserService.addUserToFriendList(inviterId, user);
 
         if (inviterPlayer) {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
@@ -199,7 +199,7 @@ userRouter.post('/change-online-status', async (req, res) => {
 
 
         // Notify friends about status change
-    const userFriends = await UserService.getUserFriends(userId);
+        const userFriends = await UserService.getUserFriends(userId);
         userFriends.forEach(friend => {
             const friendPlayer = PlayerService.getPlayer(friend.userId);
             if (friendPlayer && friendPlayer.socketId) {

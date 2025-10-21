@@ -132,17 +132,15 @@ export class UserService {
         }
     }
 
-    static async hasUserInvited(userId: string, email: string): Promise<boolean> {
+    static async hasUserInvited(userId: string, invitedId: string): Promise<boolean> {
         try {
-            const inviter = users.find(u => u.email === email);
-            if (!inviter) return false;
-            const invitation = await InvitationService.getInvitation(inviter.userId, userId);
+
+            const invitation = await InvitationService.getInvitation(userId, invitedId);
             return !!invitation;
         } catch (error) {
             console.error('Error checking invitation in DB:', error);
             // Fallback to in-memory
-            const myInvitations = this.friendInvitations.get(userId) || [];
-            return !!myInvitations.find(invited => invited.email === email);
+            return false
         }
     }
 
@@ -168,34 +166,23 @@ export class UserService {
     static async getUserFriends(userId: string): Promise<IUserPayload[]> {
         try {
             const docs = await Friend.find({ userId }).sort({ createdAt: -1 }).lean();
-            const friendPayloads: IUserPayload[] = docs.map(d => {
-                const user = users.find(u => u.userId === d.friendId);
-                if (user) {
-                    return {
-                        ...user,
-                        roles: user.roles.map(r => r as TUserTypes),
-                        sellerId: user.sellerId ?? ""
-                    } as IUserPayload;
-                }
-                return {
-                    userId: d.friendId,
-                    phoneNumber: '',
-                    roles: [],
-                    nameSurname: d.friendName || '',
-                    email: d.friendEmail || '',
-                    sub: '',
-                    iat: 0,
-                    exp: 0,
-                    sellerId: ''
-                } as IUserPayload;
-            });
-
-            // Update in-memory cache
-            this.userFriends.set(userId, friendPayloads);
-            return friendPayloads;
+            return this.mapFriendsToPayload(docs);
         } catch (error) {
             console.error('Error fetching friends from DB:', error);
-            return this.userFriends.get(userId) || [];
+            throw new Error('Failed to fetch user friends.');
         }
+    }
+    private static mapFriendsToPayload(docs: any[]): IUserPayload[] {
+        return docs.reduce((acc: IUserPayload[], d: any) => {
+            const user = users.find(u => u.userId === d.friendId);
+            if (user) {
+                acc.push({
+                    ...user,
+                    roles: user.roles.map(r => r as TUserTypes),
+                    sellerId: user.sellerId ?? ""
+                } as IUserPayload);
+            }
+            return acc;
+        }, []);
     }
 }
