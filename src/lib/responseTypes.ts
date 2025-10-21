@@ -9,7 +9,6 @@ export const responseTypes = {
     invitationNotFound: "INVITATION_NOT_FOUND",
     invitationRejected: "INVITATION_REJECTED",
     invitationCannotRejected: "INVITATION_CANNOT_REJECTED",
-    userAlreadyInRoom: "USER_ALREADY_IN_ROOM",
     invitationAccepted: "INVITATION_ACCEPTED",
     invitationTwoDirectional: "INVITATION_TWO_DIRECTIONAL",
     invitationSent: "INVITATION_SENT",
@@ -17,6 +16,8 @@ export const responseTypes = {
     roomInvitationNotFound: "ROOM_INVITATION_NOT_FOUND",
     roomNotFound: "ROOM_NOT_FOUND",
     userNotInRoom: "USER_NOT_IN_ROOM",
+    userAlreadyInRoom: "USER_ALREADY_IN_ROOM",
+    userAlreadyInvitedToRoom: "USER_ALREADY_INVITED_TO_ROOM",
     onlineStatusChanged: "ONLINE_STATUS_CHANGED",
     onlineStatusCannotChanged: "ONLINE_STATUS_CANNOT_CHANGED"
 }
