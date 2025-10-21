@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { response } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
@@ -9,6 +9,7 @@ import { RoomService } from '@services/room.service';
 import { VoiceService } from './services/voice.service';
 import { VoiceOffer, VoiceAnswer, VoiceIceCandidate, VoiceToggleMute } from './types/voice/types';
 import { UserService } from '@services/user.service';
+import { responseTypes } from './lib/responseTypes';
 
 const PORT = process.env.PORT || 3021;
 
@@ -42,24 +43,28 @@ app.get('/health', (req, res) => {
 app.post('/user/invite-friend', async (req, res) => {
   const { email, userId } = req.body;
 
+  const players = PlayerService.getAllPlayers();
+  console.log("players", players)
+
   const metaUser = UserService.getUserInfoWithId(userId);
   if (!metaUser) {
-    res.status(404).json({ status: 404, message: 'Kullanıcı bulunamadı.' });
+    res.status(422).json({ responseType: responseTypes.userNotFound, message: 'Kullanıcı bulunamadı.' });
     return;
   }
   const myFriends = UserService.getUserInfoWithId(userId)?.friends || [];
 
   if (myFriends.find(friend => friend.email === email)) {
-    res.status(403).json({ status: 403, message: 'User is already your friend' });
+    res.status(403).json({ responseType: responseTypes.userAlreadyFriend, message: 'User is already your friend' });
     return;
   }
   const invitedUser = UserService.getUserInfoWithEmail(email);
   if (!invitedUser) {
-    res.status(404).json({ status: 404, message: 'Davet edilen kullanıcı bulunamadı.' });
+    res.status(404).json({ responseType: responseTypes.invitedUserNotFound, message: 'Davet edilen kullanıcı bulunamadı.' });
     return;
   }
   const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.email);
   if (invitedUserInviteMe) {
+    console.log("inviteduser invite me")
     await UserService.addUserToFriendList(userId, invitedUser);
     await UserService.addUserToFriendList(invitedUser.userId, metaUser);
     const inviterPlayer = PlayerService.getPlayer(invitedUser.userId);
@@ -98,12 +103,12 @@ app.post('/user/invite-friend', async (req, res) => {
     }
 
 
-    res.status(201).json({ status: 201, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
+    res.status(201).json({ responseType: responseTypes.invitationTwoDirectional, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
     return;
   }
   const hasInvited = await UserService.hasUserInvited(userId, email);
   if (hasInvited) {
-    res.status(403).json({ status: 403, message: 'You have already invited this user' });
+    res.status(409).json({ responseType: responseTypes.friendRequestAlreadySent, message: 'You have already invited this user' });
     return;
   }
 
@@ -116,14 +121,13 @@ app.post('/user/invite-friend', async (req, res) => {
     // Check if invited user is online and send socket notification
     const invitedPlayer = PlayerService.getPlayer(userInvited.userId);
     console.log("invitedPlayer", invitedPlayer)
-    if (invitedPlayer && invitedPlayer.online) {
+    if (invitedPlayer) {
       console.log("invited player var ve online")
       const invitedSocketId = invitedPlayer.socketId;
       if (invitedSocketId) {
         io.to(invitedSocketId).emit('friend:invitation-received', {
           inviterId: userInviter.userId,
           inviterName: userInviter.nameSurname,
-          inviterEmail: userInviter.email,
           message: `${userInviter.nameSurname} sizi arkadaş olarak ekledi!`,
           timestamp: Date.now()
         });
@@ -131,21 +135,27 @@ app.post('/user/invite-friend', async (req, res) => {
 
     }
 
-    res.status(200).json({ status: 200, message: 'Invitation sent' });
+    res.status(200).json({ responseType: responseTypes.invitationSent, message: 'Invitation sent' });
   } else {
-    res.status(404).json({ status: 404, message: 'User not found' });
+    res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found' });
   }
 });
 
 app.post("/user/reject-friend", (req, res) => {
   const { inviterId, userId } = req.body;
-  UserService.removeUserFriendInvitation(userId, inviterId);
-  res.status(200).json({ status: 200, message: 'Invitation rejected successfully' });
+
+  try {
+    UserService.removeUserFriendInvitation(userId, inviterId);
+    res.status(200).json({ responseType: responseTypes.invitationRejected, message: 'Invitation rejected successfully' });
+  } catch (error) {
+    res.status(403).json({ responseType: responseTypes.invitationCannotRejected, message: 'Invitation cannot be rejected' });
+  }
+
 });
 
 app.post('/room/invite-friend', async (req, res) => {
   const { email, roomId, userId } = req.body;
-  console.log("email, roomId", email, roomId)
+
   const invitedUser = UserService.getUserInfoWithEmail(email);
   if (invitedUser) {
     const room = RoomService.getRoom(roomId);
@@ -160,14 +170,14 @@ app.post('/room/invite-friend', async (req, res) => {
           timestamp: Date.now()
         });
       }
-      res.status(200).json({ status: 200, message: 'User invited to room' });
+      res.status(200).json({ responseType: responseTypes.roomInvitationSent, message: 'User invited to room' });
       return;
     } else {
-      res.status(404).json({ status: 404, message: 'Room not found' });
+      res.status(404).json({ responseType: responseTypes.roomNotFound, message: 'Room not found' });
       return;
     }
   } else {
-    res.status(404).json({ status: 404, message: 'User not found' });
+    res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found' });
     return;
   }
 });
@@ -189,7 +199,7 @@ app.post('/user/accept-friend', async (req, res) => {
     const user = UserService.getUserInfoWithId(userId);
 
     if (!user) {
-      res.status(404).json({ status: 404, message: 'User not found' });
+      res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found' });
       return;
     }
 
@@ -213,7 +223,7 @@ app.post('/user/accept-friend', async (req, res) => {
     if (invitedPlayer) {
       console.log("invitedPlayer.socketId", invitedPlayer.socketId)
       const playerFriends = UserService.getUserInfoWithId(invitedPlayer.userId)?.friends || [];
-      
+
       io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
         const player = {
           userId: friend.userId,
@@ -225,32 +235,37 @@ app.post('/user/accept-friend', async (req, res) => {
       }));
     }
 
-    res.status(200).json({ status: 200, message: 'Friend added successfully' });
+    res.status(200).json({ responseType: responseTypes.friendAdded, message: 'Friend added successfully' });
   } else {
-    res.status(403).json({ status: 403, message: 'Invitation not found' });
+    res.status(403).json({ responseType: responseTypes.invitationNotFound, message: 'Invitation not found' });
   }
 });
 
 app.post('/user/change-online-status', async (req, res) => {
   const { userId, online } = req.body;
   console.log("userId, online", userId, online)
-  PlayerService.setPlayerOnlineStatus(userId, online);
+  try {
+    PlayerService.setPlayerOnlineStatus(userId, online);
 
 
-  // Notify friends about status change
-  const userFriends = UserService.getUserInfoWithId(userId)?.friends || [];
-  userFriends.forEach(friend => {
-    const friendPlayer = PlayerService.getPlayer(friend.userId);
-    if (friendPlayer && friendPlayer.socketId) {
-      io.to(friendPlayer.socketId).emit('friend:status-changed', {
-        userId: userId,
-        online: online,
-      });
-    }
-  });
+    // Notify friends about status change
+    const userFriends = UserService.getUserInfoWithId(userId)?.friends || [];
+    userFriends.forEach(friend => {
+      const friendPlayer = PlayerService.getPlayer(friend.userId);
+      if (friendPlayer && friendPlayer.socketId) {
+        io.to(friendPlayer.socketId).emit('friend:status-changed', {
+          userId: userId,
+          online: online,
+        });
+      }
+    });
 
 
-  res.status(200).json({ status: 200, message: 'Online status changed successfully' });
+    res.status(200).json({ responseType: responseTypes.onlineStatusChanged, message: 'Online status changed successfully' });
+  } catch (error) {
+    console.error('Error changing online status:', error);
+    res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Error changing online status' });
+  }
 });
 
 io.on('connection', (socket) => {
@@ -260,16 +275,17 @@ io.on('connection', (socket) => {
   socket.emit('players:all', PlayerService.getAllPlayers());
 
   socket.on('player:create', (data: {
-    userId: string, userName: string, online: boolean
+    userId: string, online: boolean
   }) => {
     const invitations = UserService.getUserFriendInvitations(data.userId);
-    console.log("player:create", data.userId, data.userName, data.online)
+    console.log("player:create", data.userId, data.online)
     console.log("invitations for created:", invitations);
-    const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, timestamp: Date.now(), online: data.online || true });
+    const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, online: data.online, timestamp: Date.now() });
     const playerFriends = UserService.getUserInfoWithId(data.userId)?.friends || [];
 
+    console.log("playerFriends", playerFriends);
     const invitationsExcludeFriend = invitations.filter(invite => {
-      return playerFriends.find(friend => friend.userId !== invite.userId);
+      return !playerFriends.find(friend => friend.userId === invite.userId);
     });
 
     console.log("invitationsExcludeFriend", invitationsExcludeFriend);
@@ -288,10 +304,9 @@ io.on('connection', (socket) => {
     socket.emit('player:created', {
       userId: player.userId, friends: friendsWithStatus, invitations: invitationsExcludeFriend.map(invite => {
         return {
-          userId: invite.userId,
-          nameSurname: invite.nameSurname,
-          email: invite.email,
-          online: PlayerService.getPlayer(invite.userId)?.online || false,
+          inviterId: invite.userId,
+          inviterName: invite.nameSurname,
+          message: `${invite.nameSurname} sizi arkadaş olarak ekledi!`,
         };
       })
     });

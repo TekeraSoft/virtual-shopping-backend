@@ -1,0 +1,22 @@
+export const responseTypes = {
+    userAlreadyFriend: "USER_ALREADY_FRIEND",
+    userNotFound: "USER_NOT_FOUND",
+    invitedUserNotFound: "INVITED_USER_NOT_FOUND",
+    cannotAddYourself: "CANNOT_ADD_YOURSELF",
+    friendRequestAlreadySent: "FRIEND_REQUEST_ALREADY_SENT",
+    friendRequestNotFound: "FRIEND_REQUEST_NOT_FOUND",
+    friendAdded: "FRIEND_ADDED",
+    invitationNotFound: "INVITATION_NOT_FOUND",
+    invitationRejected: "INVITATION_REJECTED",
+    invitationCannotRejected: "INVITATION_CANNOT_REJECTED",
+    userAlreadyInRoom: "USER_ALREADY_IN_ROOM",
+    invitationAccepted: "INVITATION_ACCEPTED",
+    invitationTwoDirectional: "INVITATION_TWO_DIRECTIONAL",
+    invitationSent: "INVITATION_SENT",
+    roomInvitationSent: "ROOM_INVITATION_SENT",
+    roomInvitationNotFound: "ROOM_INVITATION_NOT_FOUND",
+    roomNotFound: "ROOM_NOT_FOUND",
+    userNotInRoom: "USER_NOT_IN_ROOM",
+    onlineStatusChanged: "ONLINE_STATUS_CHANGED",
+    onlineStatusCannotChanged: "ONLINE_STATUS_CANNOT_CHANGED"
+}
