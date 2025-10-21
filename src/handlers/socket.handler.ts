@@ -37,15 +37,15 @@ export class SocketHandler {
     this.handleDisconnectEvent(socket);
   }
 
-  private handlePlayerEvents(socket: Socket): void {
-    socket.on('player:create', (data: {
+    private handlePlayerEvents(socket: Socket): void {
+    socket.on('player:create', async (data: {
       userId: string, online: boolean
     }) => {
-      const invitations = UserService.getUserFriendInvitations(data.userId);
+      const invitations = await UserService.getUserFriendInvitations(data.userId);
       console.log("player:create", data.userId, data.online)
       console.log("invitations for created:", invitations);
       const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, online: data.online, timestamp: Date.now() });
-      const playerFriends = UserService.getUserInfoWithId(data.userId)?.friends || [];
+  const playerFriends = await UserService.getUserFriends(data.userId);
 
       console.log("playerFriends", playerFriends);
       const invitationsExcludeFriend = invitations.filter(invite => {

@@ -14,11 +14,20 @@ export class InvitationController {
 
             const friendId = users.find(user => user.email === email)?.userId; //TODO: find user in db with email
 
+            if (!friendId) {
+                res.status(404).json({
+                    success: false,
+                    responseType: responseTypes.invitedUserNotFound,
+                    message: 'Friend not found'
+                });
+                return;
+            }
+
             if (!userId || !friendId) {
                 res.status(400).json({
                     success: false,
                     responseType: responseTypes.userNotFound,
-                    message: 'userId and friendId are required'
+                    message: 'userId is required'
                 });
                 return;
             }
@@ -64,9 +73,9 @@ export class InvitationController {
      */
     static async getSentInvitations(req: Request, res: Response): Promise<void> {
         try {
-            const { userId } = req.params;
+            const user = req.user;
 
-            if (!userId) {
+            if (!user?.userId) {
                 res.status(400).json({
                     success: false,
                     message: 'userId is required'
@@ -74,7 +83,7 @@ export class InvitationController {
                 return;
             }
 
-            const invitations = await InvitationService.getInvitationsForInviter(userId);
+            const invitations = await InvitationService.getInvitationsForInviter(user.userId);
 
             res.status(200).json({
                 success: true,

@@ -46,6 +46,7 @@ export async function getWishlist(req: Request, res: Response) {
     res.status(200).json({ success: true, wishlist });
     return;
 }
+
 export async function getMyWishlist(req: Request, res: Response) {
 
     const user = req.user;
@@ -65,7 +66,7 @@ export async function getMyWishlist(req: Request, res: Response) {
 
 export async function removeFromWishlist(req: Request, res: Response) {
     const user = req.user;
-    const attributeId = req.body.attributeId;
+    const attributeId = req.query.attributeId as string;
 
     if (!user || !user.userId) {
         res.status(401).json({ error: "Unauthorized" });

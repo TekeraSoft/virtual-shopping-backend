@@ -18,7 +18,7 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
             }
         );
         const data = await resp.json();
-        console.log("addtoCartData", data)
+        console.log("addtoCartData from api is success")
         return { success: true, message: data.message || "", data: data };
 
     } catch (error: Error | any) {
