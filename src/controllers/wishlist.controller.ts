@@ -22,7 +22,7 @@ export async function addToWishlist(req: Request, res: Response) {
 
     const isAddedToCart = await addToCart(req);
     if (!isAddedToCart.success || !isAddedToCart.data) {
-        res.status(500).json({ error: "Failed to add item to cart" });
+        res.status(500).json({ error: isAddedToCart.message || "Failed to add item to cart" });
         return;
     }
     WishlistService.addToWishlist(user.userId, isAddedToCart.data);
@@ -46,16 +46,35 @@ export async function getWishlist(req: Request, res: Response) {
     res.status(200).json({ success: true, wishlist });
     return;
 }
+export async function getMyWishlist(req: Request, res: Response) {
 
-export async function removeFromWishlist(req: Request, res: Response) {
     const user = req.user;
-
     if (!user || !user.userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
     }
 
-    const { attributeId } = req.body;
+    const cart = await getCartItems(req);
+    if (!cart.success || !cart.data) {
+        res.status(500).json({ error: "Failed to retrieve cart items" });
+        return;
+    }
+    res.status(200).json({ success: true, wishlist: cart.data });
+    return;
+}
+
+export async function removeFromWishlist(req: Request, res: Response) {
+    const user = req.user;
+    const attributeId = req.body.attributeId;
+
+    if (!user || !user.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    if (!attributeId) {
+        res.status(400).json({ error: "attributeId is required" });
+        return;
+    }
 
     const isDeletedFromCart = await deleteFromCart(req, attributeId);
     if (!isDeletedFromCart.success) {

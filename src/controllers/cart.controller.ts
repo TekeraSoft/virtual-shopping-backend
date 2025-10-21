@@ -7,7 +7,7 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
     console.log("token", token);
-
+    console.log("cartItem", cartItem)
     try {
         const resp = await fetch(
             api_base_url + `/cart/addToCart`,
@@ -22,7 +22,7 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
         return { success: true, message: data.message || "", data: data };
 
     } catch (error: Error | any) {
-
+        console.log("error", error)
         return { success: false, message: error.message || "Ürün sepete eklenemedi.", data: null };
     }
 }
@@ -44,13 +44,10 @@ export async function deleteFromCart(req: Request, attributeId: string): Promise
 }
 
 export async function getCartItems(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
-    const user = req.user;
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
 
-    if (!user) {
-        return { success: true, message: "", data: { cartItems: [], totalPrice: 0, itemCount: 0, shippingPrice: 0, id: "", sellerCampaigns: [] } };
-    }
+
     try {
         const response = await fetch(`/cart/getCart`, {
             method: 'GET',

@@ -1,10 +1,14 @@
-vmmongodb:
+services:
+  vmmongodb:
     image: mongo:latest
     container_name: vm-db
-    ports: ["27017:27017"]
+    ports: ["27018:27017"]
     environment:
       - MONGO_INITDB_ROOT_USERNAME=tekera_user
       - MONGO_INITDB_ROOT_PASSWORD=tekera_pass
     volumes:
       - vm_data:/data/db
     restart: unless-stopped
+
+volumes:
+  vm_data:

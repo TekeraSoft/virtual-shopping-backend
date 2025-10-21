@@ -1,4 +1,4 @@
-import { IAddToCartItem, ICart } from "src/schemas/cart.scheme";
+import { ICart } from "src/schemas/cart.scheme";
 
 const wishlistStore: Map<string, ICart> = new Map();
 

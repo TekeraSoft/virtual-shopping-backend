@@ -6,11 +6,14 @@ import dotenv from 'dotenv';
 import wishlistRouter from './routes/wishlist.router';
 import userRouter from '@routes/user.router';
 import roomRouter from '@routes/room.router';
+import invitationRouter from './routes/invitation.router';
 import { SocketHandler } from './handlers/socket.handler';
+import connectDB from './config/database';
 
 const PORT = process.env.PORT || 3021;
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const httpServer = createServer(app);
@@ -40,6 +43,8 @@ app.use("/room", (req, res, next) => {
   req.io = io;
   next();
 }, roomRouter);
+
+app.use("/invitation", invitationRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
