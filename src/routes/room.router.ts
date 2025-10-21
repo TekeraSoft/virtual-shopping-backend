@@ -3,12 +3,18 @@ import { UserService } from '@services/user.service';
 import { RoomService } from '@services/room.service';
 import { responseTypes } from 'src/lib/responseTypes';
 import { PlayerService } from '@services/player.service';
+import { authenticate } from '@middlewares/authtenticate.checker';
 
 const roomRouter = Router();
 
 // Add item to wishlist
-roomRouter.post('/invite-friend', async (req, res) => {
-    const { email, roomId, userId } = req.body;
+roomRouter.post('/invite-friend', authenticate, async (req, res) => {
+    const { email, roomId } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
     const io = req.io;
     if (!io) {
         res.status(500).json({ responseType: responseTypes.onlineStatusCannotChanged, message: 'Socket IO server not available.' });
@@ -32,8 +38,8 @@ roomRouter.post('/invite-friend', async (req, res) => {
             if (isPlayerOnline && isPlayerOnline.socketId) {
                 io.to(isPlayerOnline.socketId).emit('room:invitation-received', {
                     roomId: roomId,
-                    inviterName: UserService.getUserInfoWithId(userId)?.nameSurname,
-                    message: `${UserService.getUserInfoWithId(userId)?.nameSurname} sizi odaya davet etti!`,
+                    inviterName: UserService.getUserInfoWithId(user.userId)?.nameSurname,
+                    message: `${UserService.getUserInfoWithId(user.userId)?.nameSurname} sizi odaya davet etti!`,
                     timestamp: Date.now()
                 });
             }
