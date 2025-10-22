@@ -7,9 +7,7 @@ import { InvitationService } from "./invitation.service";
 
 
 export class UserService {
-    // Keep maps for backward compatibility in memory, but prefer DB-backed implementations below
-    private static userFriends: Map<string, IUserPayload[]> = new Map();
-    private static friendInvitations: Map<string, IUserPayload[]> = new Map();
+
     static verifyToken(token: string): IUserPayload {
         try {
             if (!process.env.JWT_SECRET) {
@@ -31,6 +29,7 @@ export class UserService {
             }
         }
     }
+
     static getUserInfoWithEmail(email: string): IUserPayload | null {
 
         const user = users.find(user => user.email === email);
@@ -50,7 +49,6 @@ export class UserService {
                 ...user,
                 roles: user.roles.map(role => role as TUserTypes),
                 sellerId: user.sellerId ?? "",
-                friends: this.userFriends.get(id) || [],
             }
             : null;
     }
@@ -67,10 +65,6 @@ export class UserService {
             });
             await newFriend.save();
 
-            // Update in-memory cache for quick sync (optional)
-            const friends = this.userFriends.get(userId) || [];
-            friends.push(friend);
-            this.userFriends.set(userId, friends);
         } catch (error: any) {
             // Ignore duplicate key errors (friend already added)
             if (error.code === 11000) {
@@ -127,19 +121,17 @@ export class UserService {
             return inviters;
         } catch (error) {
             console.error('Error fetching invitations from DB:', error);
-            // Fallback to in-memory
-            return this.friendInvitations.get(userId) || [];
+
+            return [];
         }
     }
 
     static async hasUserInvited(userId: string, invitedId: string): Promise<boolean> {
         try {
-
             const invitation = await InvitationService.getInvitation(userId, invitedId);
             return !!invitation;
         } catch (error) {
             console.error('Error checking invitation in DB:', error);
-            // Fallback to in-memory
             return false
         }
     }
@@ -147,16 +139,10 @@ export class UserService {
     static async removeUserFriendInvitation(userId: string, inviterId: string): Promise<void> {
         try {
             await InvitationService.removeInvitation(inviterId, userId);
-            // Update in-memory cache
-            const invitations = this.friendInvitations.get(userId) || [];
-            const updatedInvitations = invitations.filter(invite => invite.userId !== inviterId);
-            this.friendInvitations.set(userId, updatedInvitations);
+            ;
         } catch (error) {
             console.error('Error removing invitation from DB:', error);
-            // Fallback to in-memory
-            const invitations = this.friendInvitations.get(userId) || [];
-            const updatedInvitations = invitations.filter(invite => invite.userId !== inviterId);
-            this.friendInvitations.set(userId, updatedInvitations);
+
         }
     }
 
