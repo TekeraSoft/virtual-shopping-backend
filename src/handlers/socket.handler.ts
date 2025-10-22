@@ -20,24 +20,24 @@ export class SocketHandler {
 
     // Player events
     this.handlePlayerEvents(socket);
-    
+
     // Room events
     this.handleRoomEvents(socket);
-    
+
     // RPC events
     this.handleRpcEvents(socket);
-    
+
     // Voice chat events
     this.handleVoiceChatEvents(socket);
-    
+
     // Hello event
     this.handleHelloEvent(socket);
-    
+
     // Disconnect event
     this.handleDisconnectEvent(socket);
   }
 
-    private handlePlayerEvents(socket: Socket): void {
+  private handlePlayerEvents(socket: Socket): void {
     socket.on('player:create', async (data: {
       userId: string, online: boolean
     }) => {
@@ -45,9 +45,9 @@ export class SocketHandler {
       console.log("player:create", data.userId, data.online)
       console.log("invitations for created:", invitations);
       const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, online: data.online, timestamp: Date.now() });
-  const playerFriends = await UserService.getUserFriends(data.userId);
+      const playerFriends = await UserService.getUserFriends(data.userId);
 
-      console.log("playerFriends", playerFriends);
+
       const invitationsExcludeFriend = invitations.filter(invite => {
         return !playerFriends.find(friend => friend.userId === invite.userId);
       });
@@ -63,7 +63,7 @@ export class SocketHandler {
         };
       });
 
-      console.log("player friendsWithStatus", friendsWithStatus);
+      // console.log("player friendsWithStatus", friendsWithStatus);
       socket.emit('player:created', {
         userId: player.userId, friends: friendsWithStatus, invitations: invitationsExcludeFriend.map(invite => {
           return {
@@ -97,7 +97,7 @@ export class SocketHandler {
         data.rotation
       );
 
-      console.log("player moved:", socket.id, { userId: data.userId, position: data.position, rotation: data.rotation });
+      // console.log("player moved:", socket.id, { userId: data.userId, position: data.position, rotation: data.rotation });
       // Send to all other clients in the same room
       socket.to(data.roomId).emit('player:moved', {
         userId: data.userId,
@@ -267,7 +267,7 @@ export class SocketHandler {
   private handleDisconnectEvent(socket: Socket): void {
     socket.on('disconnect', (reason: string) => {
       console.log('Client disconnected:', socket.id, 'Reason:', reason);
-  
+
       // Remove player from state
       const player = PlayerService.getPlayer(socket.id);
       const voicePeer = VoiceService.getPeer(socket.id);
