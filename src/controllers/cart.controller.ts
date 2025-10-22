@@ -49,18 +49,26 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
     console.log("token", token);
 
     try {
-        const response = await fetch(api_base_url + `/cart/getCart`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
+        const response = await fetch(api_base_url + `/cart/getCart?guestUserId=`,
+            {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
+                credentials: 'include',
+            });
 
-        });
+
+        // Check if the response body is empty
+        if (!response.body || response.headers.get('content-length') === '0') {
+            console.log("Empty response body");
+            return { success: false, message: "Empty response body", data: null };
+        }
+
         const data = await response.json();
-
-        console.log("data in getcartitems", data)
+        console.log("data in getcartitems", data);
 
         return { success: true, message: data.message, data: data as ICart };
     } catch (error: any) {
-        console.log("error get cart items", error)
+        console.log("error get cart items", error);
         return { success: false, message: error.message || "Sepet verileri alınamadı.", data: null };
     }
 }
