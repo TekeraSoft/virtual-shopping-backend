@@ -267,7 +267,7 @@ export class SocketHandler {
   private handleDisconnectEvent(socket: Socket): void {
     socket.on('disconnect', (reason: string) => {
       console.log('Client disconnected:', socket.id, 'Reason:', reason);
-
+  
       // Remove player from state
       const player = PlayerService.getPlayer(socket.id);
       const voicePeer = VoiceService.getPeer(socket.id);

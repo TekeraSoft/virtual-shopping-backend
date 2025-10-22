@@ -198,6 +198,7 @@ userRouter.post('/accept-friend', authenticate, async (req, res) => {
         res.status(403).json({ responseType: responseTypes.invitationNotFound, message: 'Invitation not found' });
     }
 });
+
 userRouter.delete('/remove-friend', authenticate, async (req, res) => {
     const friendId = req.query.friendId as string;
     const user = req.user;
@@ -212,7 +213,7 @@ userRouter.delete('/remove-friend', authenticate, async (req, res) => {
     }
 
     try {
-        await UserService.removeFriend(user.userId);
+        await UserService.removeFriend(user.userId, friendId);
         res.status(200).json({ responseType: responseTypes.friendRemoved, message: 'Friend removed successfully.' });
         return;
     } catch (error) {

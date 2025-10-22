@@ -25,12 +25,15 @@ export async function addToWishlist(req: Request, res: Response) {
         res.status(500).json({ error: isAddedToCart.message || "Failed to add item to cart" });
         return;
     }
-    WishlistService.addToWishlist(user.userId, isAddedToCart.data);
+    console.log("Item added to cart:", isAddedToCart.data.id);
+    await WishlistService.addToWishlist(isAddedToCart.data);
+    console.log("wishliste eklendi.")
     res.status(200).json({
         success: true,
         message: "Item added to wishlist",
-        data: isAddedToCart.data
+        wishlist: isAddedToCart.data
     });
+    console.log("response döndü.");
     return;
 }
 
@@ -42,7 +45,7 @@ export async function getWishlist(req: Request, res: Response) {
         return;
     }
 
-    const wishlist = WishlistService.getWishlist(wishlistUserId);
+    const wishlist = await WishlistService.getWishlist(wishlistUserId);
     res.status(200).json({ success: true, wishlist });
     return;
 }
@@ -89,13 +92,13 @@ export async function removeFromWishlist(req: Request, res: Response) {
         return;
     }
 
-    const removed = WishlistService.removeFromWishlist(user.userId, cart.data);
+    const removed = await WishlistService.removeFromWishlist(cart.data);
 
     if (removed) {
         res.status(200).json({
             success: true,
             message: "Item removed from wishlist",
-            data: WishlistService.getWishlist(user.userId)
+            wishlist: WishlistService.getWishlist(user.userId)
         });
         return;
     }

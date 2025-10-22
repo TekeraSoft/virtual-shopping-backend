@@ -158,9 +158,9 @@ export class UserService {
             throw new Error('Failed to fetch user friends.');
         }
     }
-    static async removeFriend(userId: string): Promise<boolean> {
+    static async removeFriend(userId: string, friendId: string): Promise<boolean> {
         try {
-            const docs = await Friend.findOneAndDelete({ friendId: userId }).lean();
+            await Friend.findOneAndDelete({ friendId: friendId, userId: userId }).lean();
             return true;
         } catch (error) {
             console.error('Error fetching friends from DB:', error);

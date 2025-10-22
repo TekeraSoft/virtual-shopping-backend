@@ -1,33 +1,33 @@
-import { ICart } from "src/schemas/cart.scheme";
-
-const wishlistStore: Map<string, ICart> = new Map();
+import { ICart } from 'src/schemas/cart.scheme';
+import WishlistModel from '../models/wishlist.model';
 
 export class WishlistService {
 
-  static addToWishlist(userId: string, item: ICart): void {
-    wishlistStore.set(userId, item);
+  static async addToWishlist(item: ICart): Promise<ICart | null> {
+    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.id }, item, { new: true })) as unknown as ICart | null;
+
+    if (wishlist) {
+      return wishlist;
+    } else {
+      const newWishlist = new WishlistModel(item);
+      return newWishlist.save();
+    }
   }
 
-
-  static getWishlist(userId: string): ICart | null {
-    return wishlistStore.get(userId) || null;
+  static async getWishlist(userId: string): Promise<ICart | null> {
+    return WishlistModel.findOne({ id: userId });
   }
 
-
-  static removeFromWishlist(userId: string, cart: ICart): boolean {
-
-    wishlistStore.set(userId, cart);
-
-    return true;
+  static async removeFromWishlist(item: ICart): Promise<ICart | null> {
+    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.id }, item, { new: true })) as unknown as ICart | null;
+    if (wishlist) {
+      return wishlist
+    }
+    return null;
   }
 
-
-  static clearWishlist(userId: string): void {
-    wishlistStore.delete(userId);
+  static async clearWishlist(userId: string): Promise<void> {
+    await WishlistModel.deleteOne({ id: userId });
   }
 
-
-  static getAllWishlists(): Map<string, ICart> {
-    return wishlistStore;
-  }
 }

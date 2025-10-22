@@ -19,6 +19,8 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   path: '/socket.io/',
+  pingInterval: 25000,   // 25 saniyede bir ping at
+  pingTimeout: 30000,   // 30 saniye cevap gelmezse bağlantıyı kes
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST'],
