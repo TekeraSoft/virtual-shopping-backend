@@ -72,3 +72,23 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
         return { success: false, message: error.message || "Sepet verileri alınamadı.", data: null };
     }
 }
+
+export async function clearCart(req: Request): Promise<{ success: boolean; message: string; data: any | null }> {
+    const user = req.user;
+    if (!user || !user.userId) {
+        return { success: false, message: "Unauthorized", data: null };
+    }
+    const authHeader = req.header("Authorization");
+    const token = authHeader ? authHeader.split(" ")[1] : null;
+    try {
+        const response = await fetch(api_base_url + `/cart/clearCart?cartOwnerId=${user?.userId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
+
+        });
+        const data = await response.json();
+        return { success: true, message: data.message || "", data: data };
+    } catch (error: any) {
+        return { success: false, message: error.message || "Sepet temizlenemedi.", data: null };
+    }
+}

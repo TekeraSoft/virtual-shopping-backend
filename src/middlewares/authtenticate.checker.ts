@@ -13,9 +13,6 @@ export const authenticate = async (
     res: Response,
     next: NextFunction
 ): Promise<void> => {
-
-
-
     const authHeader = req.header("Authorization");
 
     if (!authHeader) {

@@ -1,7 +1,7 @@
 
 import { Request, Response } from "express";
 import { WishlistService } from "@services/wishlist.service";
-import { addToCart, deleteFromCart, getCartItems } from "./cart.controller";
+import { addToCart, clearCart, deleteFromCart, getCartItems } from "./cart.controller";
 import { IAddToCartItem } from "src/schemas/cart.scheme";
 
 export async function addToWishlist(req: Request, res: Response) {
@@ -63,6 +63,10 @@ export async function getMyWishlist(req: Request, res: Response) {
         res.status(500).json({ error: "Failed to retrieve my cart items" });
         return;
     }
+    if (!cart.data.cartItems?.length) {
+        res.status(200).json({ wishlist: null });
+        return;
+    }
     res.status(200).json({ success: true, wishlist: cart.data });
     return;
 }
@@ -104,4 +108,33 @@ export async function removeFromWishlist(req: Request, res: Response) {
     }
     res.status(404).json({ error: "Item not found in wishlist" });
     return;
+}
+
+export async function clearWishlist(req: Request, res: Response) {
+    const user = req.user;
+
+    if (!user || !user.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
+    try {
+        await WishlistService.clearWishlist(user.userId);
+        const response = await clearCart(req);
+
+        if (!response.success) {
+            res.status(500).json({ error: "Failed to clear cart" });
+            return;
+        }
+        res.status(200).json({
+            success: true,
+            message: "Wishlist cleared",
+            wishlist: null
+        });
+        return
+    } catch (error) {
+        console.error('Error clearing wishlist:', error);
+        res.status(500).json({ error: "Failed to clear wishlist" });
+        return;
+    }
 }

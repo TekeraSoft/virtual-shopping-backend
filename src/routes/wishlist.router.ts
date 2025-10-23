@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addToWishlist, getMyWishlist, getWishlist, removeFromWishlist } from '../controllers/wishlist.controller';
+import { addToWishlist, clearWishlist, getMyWishlist, getWishlist, removeFromWishlist } from '../controllers/wishlist.controller';
 import { authenticate } from '@middlewares/authtenticate.checker';
 
 const wishlistRouter = Router();
@@ -11,6 +11,7 @@ wishlistRouter.post('/add', authenticate, addToWishlist);
 wishlistRouter.get('/', getWishlist);
 
 wishlistRouter.get('/me', authenticate, getMyWishlist);
+wishlistRouter.delete('/clear', authenticate, clearWishlist);
 
 
 // Remove item from wishlist
