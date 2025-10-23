@@ -88,9 +88,9 @@ const WishlistSchema = new Schema({
         },
     ],
     id: { type: String, required: true, unique: true },
-    itemCount: { type: Number, required: true },
-    totalPrice: { type: Number, required: true },
-    shippingPrice: { type: Number, required: true },
+    itemCount: { type: Number, default: 0 },
+    totalPrice: { type: Number, default: 0 },
+    shippingPrice: { type: Number, default: 0 },
 });
 
 // Create the Wishlist model

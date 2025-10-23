@@ -59,11 +59,15 @@ export async function getMyWishlist(req: Request, res: Response) {
     }
 
     const cart = await getCartItems(req);
-    if (!cart.success || !cart.data) {
+    const getMyWishlist = await WishlistService.getWishlist(user.userId);
+    if (!getMyWishlist && cart.data?.id) {
+        await WishlistService.addToWishlist(cart.data);
+    }
+    if (!cart.success) {
         res.status(500).json({ error: "Failed to retrieve my cart items" });
         return;
     }
-    if (!cart.data.cartItems?.length) {
+    if (!cart.data?.cartItems?.length) {
         res.status(200).json({ wishlist: null });
         return;
     }
@@ -90,9 +94,16 @@ export async function removeFromWishlist(req: Request, res: Response) {
         return;
     }
 
+    console.log("Item removed from cart:", isDeletedFromCart.data);
+
     const cart = await getCartItems(req);
-    if (!cart.success || !cart.data) {
+    if (!cart.success) {
         res.status(500).json({ error: "Failed to retrieve cart items" });
+        return;
+    }
+
+    if (!cart.data) {
+        res.status(404).json({ error: "Item not found in wishlist" });
         return;
     }
 
@@ -118,8 +129,9 @@ export async function clearWishlist(req: Request, res: Response) {
         return;
     }
 
+    await WishlistService.clearWishlist(user.userId);
     try {
-        await WishlistService.clearWishlist(user.userId);
+
         const response = await clearCart(req);
 
         if (!response.success) {

@@ -36,8 +36,12 @@ export async function deleteFromCart(req: Request, attributeId: string): Promise
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
 
         });
-        const data = await response.json();
-        return { success: true, message: data.message || "", data: data };
+
+        if (!response.ok) {
+            return { success: false, message: "Failed to delete item from cart.", data: null };
+        }
+
+        return { success: true, message: "cart cleared", data: null };
     } catch (error: any) {
         return { success: false, message: error.message || "Ürün sepete eklenemedi.", data: null };
     }
@@ -59,8 +63,7 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
 
         // Check if the response body is empty
         if (!response.body || response.headers.get('content-length') === '0') {
-            console.log("Empty response body");
-            return { success: false, message: "Empty response body", data: null };
+            return { success: true, message: "Empty response body", data: null };
         }
 
         const data = await response.json();
@@ -86,8 +89,11 @@ export async function clearCart(req: Request): Promise<{ success: boolean; messa
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
 
         });
-        const data = await response.json();
-        return { success: true, message: data.message || "", data: data };
+        console.log("response clear", response)
+        if (!response.ok) {
+            return { success: false, message: "Failed to clear cart.", data: null };
+        }
+        return { success: true, message: "Cart cleared", data: null };
     } catch (error: any) {
         return { success: false, message: error.message || "Sepet temizlenemedi.", data: null };
     }
