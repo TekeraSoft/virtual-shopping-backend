@@ -103,7 +103,8 @@ export async function removeFromWishlist(req: Request, res: Response) {
     }
 
     if (!cart.data) {
-        res.status(404).json({ error: "Item not found in wishlist" });
+        res.status(200).json({ wishlist: null });
+        await WishlistService.clearWishlist(user.userId);
         return;
     }
 
