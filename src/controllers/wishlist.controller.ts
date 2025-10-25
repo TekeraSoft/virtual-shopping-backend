@@ -156,3 +156,16 @@ export async function clearWishlist(req: Request, res: Response) {
         return;
     }
 }
+
+export async function clearAllWishlists(req: Request, res: Response) {
+    try {
+        await WishlistService.clearAllWishlists();
+        res.status(200).json({
+            success: true,
+            message: "All wishlists cleared"
+        });
+    } catch (error) {
+        console.error('Error clearing all wishlists:', error);
+        res.status(500).json({ error: "Failed to clear all wishlists" });
+    }
+}
