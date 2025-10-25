@@ -27,7 +27,7 @@ export class WishlistService {
   }
 
   static async clearWishlist(userId: string): Promise<void> {
-    await WishlistModel.deleteOne({ id: userId });
+    await WishlistModel.deleteOne({ cartId: userId });
   }
 
   static async clearAllWishlists(): Promise<void> {
