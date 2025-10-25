@@ -2,7 +2,7 @@
 import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { IUserPayload, TUserTypes } from "../types/user/types";
 import { users } from "src/data/users";
-import { Friend } from "src/models/friend.model";
+import { Friend, IFriend } from "src/models/friend.model";
 import { InvitationService } from "./invitation.service";
 
 
@@ -64,6 +64,7 @@ export class UserService {
                 friendName: friend.nameSurname
             });
             await newFriend.save();
+            await this.removeUserFriendInvitation(userId, friend.userId);
 
         } catch (error: any) {
             // Ignore duplicate key errors (friend already added)
@@ -142,7 +143,6 @@ export class UserService {
             ;
         } catch (error) {
             console.error('Error removing invitation from DB:', error);
-
         }
     }
 
@@ -156,6 +156,26 @@ export class UserService {
         } catch (error) {
             console.error('Error fetching friends from DB:', error);
             throw new Error('Failed to fetch user friends.');
+        }
+    }
+    static async removeAllFriends(): Promise<void> {
+        try {
+            await Friend.deleteMany({}).lean();
+            console.log("All friends deleted from DB.");
+        } catch (error) {
+            console.error('Error deleting all friends from DB:', error);
+            throw new Error('Tüm arkadaşlar silinemedi.');
+        }
+    }
+    static async getAllFriends(): Promise<{ success: boolean; data: IFriend[] }> {
+        try {
+            const docs = await Friend.find({}).lean().exec();
+            // lean().exec() returns mongoose documents which may include extra/internal fields;
+            // cast via unknown first when the developer intentionally asserts this shape.
+            return { success: true, data: docs as unknown as IFriend[] };
+        } catch (error) {
+            console.error('Error fetching all friends from DB:', error);
+            return { success: false, data: [] };
         }
     }
     static async removeFriend(userId: string, friendId: string): Promise<boolean> {

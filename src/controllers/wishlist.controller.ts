@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { WishlistService } from "@services/wishlist.service";
 import { addToCart, clearCart, deleteFromCart, getCartItems } from "./cart.controller";
 import { IAddToCartItem } from "src/schemas/cart.scheme";
+import { cartSummarizer } from "src/lib/cartSummarizer";
 
 export async function addToWishlist(req: Request, res: Response) {
     const user = req.user;
@@ -25,13 +26,17 @@ export async function addToWishlist(req: Request, res: Response) {
         res.status(500).json({ error: isAddedToCart.message || "Failed to add item to cart" });
         return;
     }
-    console.log("Item added to cart:", isAddedToCart.data.id);
-    await WishlistService.addToWishlist(isAddedToCart.data);
+   const newWishList = await getCartItems(req);
+   if (!newWishList.success || !newWishList.data) {
+       res.status(500).json({ error: newWishList.message || "Failed to retrieve cart items" });
+       return;
+   }
+    await WishlistService.addToWishlist(newWishList.data);
     console.log("wishliste eklendi.")
     res.status(200).json({
         success: true,
         message: "Item added to wishlist",
-        wishlist: isAddedToCart.data
+        wishlist: newWishList.data
     });
     console.log("response döndü.");
     return;
@@ -60,14 +65,14 @@ export async function getMyWishlist(req: Request, res: Response) {
 
     const cart = await getCartItems(req);
     const getMyWishlist = await WishlistService.getWishlist(user.userId);
-    if (!getMyWishlist && cart.data?.id) {
+    if (!getMyWishlist && cart.data?.cartId) {
         await WishlistService.addToWishlist(cart.data);
     }
     if (!cart.success) {
         res.status(500).json({ error: "Failed to retrieve my cart items" });
         return;
     }
-    if (!cart.data?.cartItems?.length) {
+    if (!cartSummarizer(cart.data)) {
         res.status(200).json({ wishlist: null });
         return;
     }

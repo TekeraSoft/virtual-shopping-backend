@@ -325,4 +325,22 @@ export class InvitationController {
             console.error('Error cleaning up expired invitations:', error);
         }
     }
+
+    static async clearAllInvitations(req: Request, res: Response): Promise<void> {
+        try {
+            await InvitationService.clearAllInvitations();
+
+            res.status(200).json({
+                success: true,
+                message: 'All invitations removed successfully'
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+            console.error('Error removing all invitations:', error);
+        }
+    }
 }

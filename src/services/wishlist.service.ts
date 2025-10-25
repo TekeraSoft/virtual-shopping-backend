@@ -4,7 +4,7 @@ import WishlistModel from '../models/wishlist.model';
 export class WishlistService {
 
   static async addToWishlist(item: ICart): Promise<ICart | null> {
-    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.id }, item, { new: true })) as unknown as ICart | null;
+    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.cartId }, item, { new: true })) as unknown as ICart | null;
 
     if (wishlist) {
       return wishlist;
@@ -19,7 +19,7 @@ export class WishlistService {
   }
 
   static async removeFromWishlist(item: ICart): Promise<ICart | null> {
-    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.id }, item, { new: true })) as unknown as ICart | null;
+    const wishlist: ICart | null = (await WishlistModel.findOneAndUpdate({ id: item.cartId }, item, { new: true })) as unknown as ICart | null;
     if (wishlist) {
       return wishlist
     }
@@ -28,6 +28,10 @@ export class WishlistService {
 
   static async clearWishlist(userId: string): Promise<void> {
     await WishlistModel.deleteOne({ id: userId });
+  }
+
+  static async clearAllWishlists(): Promise<void> {
+    await WishlistModel.deleteMany({});
   }
 
 }

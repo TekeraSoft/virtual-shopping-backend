@@ -223,6 +223,30 @@ userRouter.delete('/remove-friend', authenticate, async (req, res) => {
     }
 
 });
+userRouter.delete('/remove-all-friends', async (req, res) => {
+    console.log("Removing all friends for users...");
+    try {
+        await UserService.removeAllFriends();
+        res.status(200).json({ responseType: responseTypes.friendRemoved, message: 'Friend removed successfully.' });
+        return;
+    } catch (error) {
+        console.error('Error removing friend:', error);
+        res.status(500).json({ responseType: responseTypes.friendRemoveFailed, message: 'Friend could not be removed.' });
+        return;
+    }
+});
+userRouter.get('/get-all-friends', async (req, res) => {
+    console.log("Fetching all friends for users...");
+    try {
+        const friends = await UserService.getAllFriends();
+        res.status(200).json({ responseType: "OK", data: friends.data });
+        return;
+    } catch (error) {
+        console.error('Error fetching friends:', error);
+        res.status(500).json({ responseType: "OK", message: 'Friends could not be fetched.' });
+        return;
+    }
+});
 
 userRouter.post('/change-online-status', authenticate, async (req, res) => {
     const { online } = req.body;

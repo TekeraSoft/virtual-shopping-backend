@@ -25,5 +25,6 @@ invitationRouter.get('/mutual/:userId1/:userId2', authenticate, InvitationContro
 // Admin routes
 invitationRouter.get('/all', authenticate, InvitationController.getAllInvitations);
 invitationRouter.delete('/cleanup', authenticate, InvitationController.cleanupExpiredInvitations);
+invitationRouter.delete('/clean-all', authenticate, InvitationController.clearAllInvitations);
 
 export default invitationRouter;

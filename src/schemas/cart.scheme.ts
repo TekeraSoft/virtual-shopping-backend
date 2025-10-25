@@ -1,30 +1,51 @@
 import { z } from "zod";
 
-export const CartItemSchema = z.object({
+export const AddToCartItemScheme = z.object({
     productId: z.string().min(1, "Product ID is required"),
     quantity: z.number().min(1, "Quantity must be at least 1"),
     variationId: z.string().min(1, "Variation ID is required"),
     attributeId: z.string().min(1, "Attribute ID is required"),
 });
 
-export interface IAddToCartItem extends z.infer<typeof CartItemSchema> { }
+export interface IAddToCartItem extends z.infer<typeof AddToCartItemScheme> { }
 
 
-export interface ICampaignLabel {
-    id: string;
-    campaignImage: string;
-    campaignType: string;
-    description: string;
-    discountType: string;
-    discountValue: number;
-    endDate: string;
-    isActive: boolean;
-    name: string;
-    startDate: string;
+export interface ICart {
+    cartId: string;
+    totals: ITotals;
+    sellers: ISeller[];
 }
 
-interface ISuggestion {
-    campaignId: string;
+export interface ITotals {
+    baseTotal: number;
+    discountTotal: number;
+    shipping: number | null;
+    grandTotal: number;
+}
+
+export interface ISeller {
+    sellerId: string;
+    sellerName: string;
+    sellerImage: string;
+    totals: ITotals;
+    campaignBuckets: ICampaignBucket[];
+    otherItems: ICartItem[];
+}
+
+export interface ICampaignBucket {
+    campaign: ICampaign;
+    state: "APPLIED" | "PARTIAL" | "NOT_APPLIED";
+    groupKey: string | null;
+    thresholdQty: number | null;
+    currentQty: number | null;
+    missingQty: number | null;
+    freeUnits: number | null;
+    totalDiscount: number;
+    items: ICartItem[];
+    suggestion: ICampaignSuggestion;
+}
+
+export interface ICampaignSuggestion {
     missingQuantity: number;
     potentialExtraSaving: number;
     suggestedAttributeId: string;
@@ -32,67 +53,40 @@ interface ISuggestion {
     title: string;
 }
 
-export interface ISellerCampaign {
-    sellerId: string;
-    sellerName: string;
-    appliedCampaign: {
-        id: string;
-        name: string;
-        description: string;
-        campaignType: string; // Sabit değer gibi görünüyor
-        discountValue: number;
-        discountType: string;
-        startDate: string; // ISO tarih formatı
-        endDate: string;
-        campaignImage: string;
-        isActive: boolean;
-    };
-    suggestions: ISuggestion[];
-    totalDiscount: number;
-};
-
-export interface ICart {
-    cartItems: ICartItem[];
-    sellerCampaigns: ISellerCampaign[] | null;
-    id: string;
-    itemCount: number;
-    totalPrice: number;
-    shippingPrice: number;
-};
-
-
-
-export interface ISeller {
+export interface ICampaign {
     id: string;
     name: string;
-    slug: string;
-    image: string;
-}
-
-interface ProductAttribute {
-    key: string;
-    value: string;
+    description: string;
+    campaignType: "DISCOUNT_OR_PERCENT" | "BUYXGETY" | string;
+    discountValue: number;
+    discountType: "PERCENT" | "NO_VALUE" | string;
+    startDate: string; // ISO format
+    endDate: string;   // ISO format
+    campaignImage: string;
+    isActive: boolean;
 }
 
 export interface ICartItem {
     attributeId: string;
-    attributes: ProductAttribute[]; // Attribute tipini aşağıda ayrıca tanımlayabilirsin
-    availableCampaigns: ICampaignLabel[] | null;
-    brandName: string;
-    color: string;
-    discountAmount: number;
-    finalPrice: number;
-    image: string;
-    maxPurchaseStock: number;
-    modelCode: string;
-    name: string;
-    price: number;
     productId: string;
-    productSlug: string;
-    quantity: number;
-    selectedCampaignId: string | null;
-    seller: ISeller;
-    slugId: string;
     variationId: string;
+    name: string;
+    brandName: string;
+    productSlug: string;
+    slugId: string;
+    image: string;
+    color: string;
+    qty: number;
+    baseUnitPrice: number;
+    baseLineTotal: number;
+    finalUnitPrice: number;
+    finalLineTotal: number;
+    discount: number;
+    freeUnits: number | null;
+    attributes: ProductAttribute[];
 }
 
+export interface ProductAttribute {
+    key: string;
+    value: string;
+}
