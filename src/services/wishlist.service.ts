@@ -15,7 +15,7 @@ export class WishlistService {
   }
 
   static async getWishlist(userId: string): Promise<ICart | null> {
-    return WishlistModel.findOne({ id: userId });
+    return WishlistModel.findOne({ cartId: userId });
   }
 
   static async removeFromWishlist(item: ICart): Promise<ICart | null> {
