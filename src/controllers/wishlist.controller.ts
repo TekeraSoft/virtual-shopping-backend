@@ -64,6 +64,7 @@ export async function getMyWishlist(req: Request, res: Response) {
     }
 
     const cart = await getCartItems(req);
+    console.log("getMyWishlist cartId", cart.data?.cartId)
     const getMyWishlist = await WishlistService.getWishlist(user.userId);
     if (!getMyWishlist && cart.data?.cartId) {
         await WishlistService.addToWishlist(cart.data);
@@ -102,6 +103,7 @@ export async function removeFromWishlist(req: Request, res: Response) {
     console.log("Item removed from cart:", isDeletedFromCart.data);
 
     const cart = await getCartItems(req);
+    console.log("removeFromWishlist cartId", cart.data?.cartId);
     if (!cart.success) {
         res.status(500).json({ error: "Failed to retrieve cart items" });
         return;
@@ -141,6 +143,7 @@ export async function clearWishlist(req: Request, res: Response) {
         const response = await clearCart(req);
 
         if (!response.success) {
+            console.log("Failed to clear cart while clearing wishlist");
             res.status(500).json({ error: "Failed to clear cart" });
             return;
         }

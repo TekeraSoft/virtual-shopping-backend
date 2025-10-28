@@ -67,7 +67,7 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
         }
 
         const data = await response.json();
-        console.log("data in getcartitems", data.id);
+        console.log("cartId in getcartitems", data.cartId);
 
         return { success: true, message: data.message, data: data as ICart };
     } catch (error: any) {

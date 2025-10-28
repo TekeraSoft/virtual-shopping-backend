@@ -2,18 +2,18 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IInvitation extends Document {
     _id: string;
-    userId: string;
-    friendId: string;
+    invitedId: string;
+    inviterId: string;
     createdAt: Date;
     updatedAt: Date;
 }
 
 const invitationSchema: Schema = new Schema({
-    userId: {
+    invitedId: {
         type: String,
         required: true
     },
-    friendId: {
+    inviterId: {
         type: String,
         required: true
     }

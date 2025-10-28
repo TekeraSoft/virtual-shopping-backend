@@ -90,7 +90,7 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
     const userInviter = UserService.getUserInfoWithId(user.userId);
     if (userInvited && userInviter) {
         console.log("userInvited ve inviter var")
-        await UserService.inviteUserFriend(userInvited.userId, userInviter);
+        await UserService.inviteFriend(userInvited.userId, userInviter.userId);
 
         // Check if invited user is online and send socket notification
         const invitedPlayer = PlayerService.getPlayer(userInvited.userId);

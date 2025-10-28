@@ -1,7 +1,7 @@
 import { Invitation, IInvitation } from '../models/invitation.model';
 
 export class InvitationService {
-    
+
     /**
      * Create a new invitation
      * @param userId - ID of the user sending the invitation
@@ -9,13 +9,13 @@ export class InvitationService {
      * @returns Created invitation document
      * @throws Error if invitation already exists
      */
-    static async createInvitation(userId: string, friendId: string): Promise<IInvitation> {
+    static async createInvitation(invitedId: string, inviterId: string): Promise<IInvitation> {
         try {
             const newInvitation = new Invitation({
-                userId,
-                friendId
+                inviterId,
+                invitedId
             });
-            
+
             const savedInvitation = await newInvitation.save();
             return savedInvitation;
         } catch (error: any) {
@@ -26,7 +26,7 @@ export class InvitationService {
             throw error;
         }
     }
-    
+
     /**
      * Get all invitations sent by a specific user
      * @param userId - ID of the user who sent invitations
@@ -72,7 +72,7 @@ export class InvitationService {
             return false;
         }
     }
-    
+
     /**
      * Check if invitation exists between two users
      * @param userId - ID of the user who sent the invitation
@@ -88,7 +88,7 @@ export class InvitationService {
             return null;
         }
     }
-    
+
     /**
      * Check if there's a mutual invitation (both users invited each other)
      * @param userId1 - First user ID
@@ -104,7 +104,7 @@ export class InvitationService {
                 Invitation.findOne({ userId: userId1, friendId: userId2 }),
                 Invitation.findOne({ userId: userId2, friendId: userId1 })
             ]);
-            
+
             return {
                 user1ToUser2: invitation1,
                 user2ToUser1: invitation2
@@ -117,7 +117,7 @@ export class InvitationService {
             };
         }
     }
-    
+
     /**
      * Get all invitations in the system (for admin purposes)
      * @param limit - Maximum number of invitations to return
@@ -136,7 +136,7 @@ export class InvitationService {
             return [];
         }
     }
-    
+
     /**
      * Get total count of invitations in the system
      * @returns Total number of invitations
@@ -150,7 +150,7 @@ export class InvitationService {
             return 0;
         }
     }
-    
+
     /**
      * Clear all invitations (for testing purposes)
      * @returns Number of deleted invitations
@@ -164,7 +164,7 @@ export class InvitationService {
             return 0;
         }
     }
-    
+
     /**
      * Get invitations by date range
      * @param startDate - Start date
@@ -185,7 +185,7 @@ export class InvitationService {
             return [];
         }
     }
-    
+
     /**
      * Remove expired invitations (older than specified days)
      * @param days - Number of days after which invitations are considered expired
@@ -195,11 +195,11 @@ export class InvitationService {
         try {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() - days);
-            
+
             const result = await Invitation.deleteMany({
                 createdAt: { $lt: expiryDate }
             });
-            
+
             return result.deletedCount || 0;
         } catch (error) {
             console.error('Error removing expired invitations:', error);

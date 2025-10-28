@@ -79,15 +79,10 @@ export class UserService {
      * Create a friend invitation (persisted in DB)
      * Note: the Invitation model stores inviter->friend mapping, so we invert parameters accordingly
      */
-    static async inviteUserFriend(userId: string, friend: IUserPayload): Promise<void> {
+    static async inviteFriend(invitedId: string, inviterId: string): Promise<void> {
         try {
             // userId is the invited user's id in the old signature; friend.userId is inviter
-            await InvitationService.createInvitation(friend.userId, userId);
-
-            // // Keep in-memory for compatibility
-            // const invitations = this.friendInvitations.get(userId) || [];
-            // invitations.push(friend);
-            // this.friendInvitations.set(userId, invitations);
+            await InvitationService.createInvitation(invitedId, inviterId);
         } catch (error) {
             throw error;
         }
@@ -98,7 +93,7 @@ export class UserService {
             const invitations = await InvitationService.getInvitationsForInvited(userId);
             // Map to IUserPayload using the users data if available
             const inviters: IUserPayload[] = invitations.map(inv => {
-                const inviterUser = users.find(u => u.userId === inv.userId);
+                const inviterUser = users.find(u => u.userId === inv.inviterId);
                 if (inviterUser) {
                     return {
                         ...inviterUser,
@@ -108,7 +103,7 @@ export class UserService {
                 }
                 // Fallback: minimal payload
                 return {
-                    userId: inv.userId,
+                    userId: "",
                     phoneNumber: '',
                     roles: [],
                     nameSurname: '',
