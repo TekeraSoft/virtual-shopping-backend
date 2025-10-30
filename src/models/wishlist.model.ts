@@ -92,7 +92,7 @@ const WishlistSchema = new Schema({
     cartId: { type: String, required: false, unique: true },
     totals: { type: TotalsSchema, required: false },
     sellers: [SellerSchema],
-});
+}, { _id: false });
 
 // Create the Wishlist model
 const WishlistModel = mongoose.model<ICart>('Wishlist', WishlistSchema);

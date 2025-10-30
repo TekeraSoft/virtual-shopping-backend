@@ -4,30 +4,13 @@ import WishlistModel from '../models/wishlist.model';
 export class WishlistService {
 
   static async addToWishlist(item: ICart): Promise<ICart | null> {
-    try {
-      // Use findOneAndReplace with upsert to handle both insert and update cases
-      const wishlist: ICart | null = (await WishlistModel.findOneAndReplace(
-        { cartId: item.cartId },
-        item,
-        { 
-          new: true, 
-          upsert: true,
-          returnDocument: 'after'
-        }
-      )) as unknown as ICart | null;
+    await WishlistModel.replaceOne(
+      { cartId: item.cartId },
+      item,
+      { upsert: true }
+    );
 
-      return wishlist;
-    } catch (error) {
-      console.error(`Error adding to wishlist for cartId ${item.cartId}:`, error);
-      
-      // If we get a duplicate key error, try to get the existing document
-      if ((error as any).code === 11000) {
-        console.log(`Duplicate key error for cartId ${item.cartId}, attempting to fetch existing document`);
-        return await WishlistModel.findOne({ cartId: item.cartId });
-      }
-      
-      throw error;
-    }
+    return await WishlistModel.findOne({ cartId: item.cartId });
   }
 
   static async getWishlist(userId: string): Promise<ICart | null> {
@@ -46,7 +29,7 @@ export class WishlistService {
     try {
       const result = await WishlistModel.deleteOne({ cartId: userId });
       console.log(`Cleared wishlist for user ${userId}, deleted ${result.deletedCount} documents`);
-      
+
       // Wait a bit to ensure the deletion is fully processed
       if (result.deletedCount > 0) {
         await new Promise(resolve => setTimeout(resolve, 100));
