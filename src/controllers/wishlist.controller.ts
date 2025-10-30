@@ -26,11 +26,11 @@ export async function addToWishlist(req: Request, res: Response) {
         res.status(500).json({ error: isAddedToCart.message || "Failed to add item to cart" });
         return;
     }
-   const newWishList = await getCartItems(req);
-   if (!newWishList.success || !newWishList.data) {
-       res.status(500).json({ error: newWishList.message || "Failed to retrieve cart items" });
-       return;
-   }
+    const newWishList = await getCartItems(req);
+    if (!newWishList.success || !newWishList.data) {
+        res.status(500).json({ error: newWishList.message || "Failed to retrieve cart items" });
+        return;
+    }
     await WishlistService.addToWishlist(newWishList.data);
     console.log("wishliste eklendi.")
     res.status(200).json({
@@ -67,7 +67,14 @@ export async function getMyWishlist(req: Request, res: Response) {
     console.log("getMyWishlist cartId", cart.data?.cartId)
     const getMyWishlist = await WishlistService.getWishlist(user.userId);
     if (!getMyWishlist && cart.data?.cartId) {
-        await WishlistService.addToWishlist(cart.data);
+        try {
+            await WishlistService.addToWishlist(cart.data);
+        } catch (error) {
+            // console.error('Error adding to wishlist:', error);
+            res.status(500).json({ error: "Failed to add to wishlist in getMyWishlist" });
+            return;
+        }
+
     }
     if (!cart.success) {
         res.status(500).json({ error: "Failed to retrieve my cart items" });
@@ -170,5 +177,42 @@ export async function clearAllWishlists(req: Request, res: Response) {
     } catch (error) {
         console.error('Error clearing all wishlists:', error);
         res.status(500).json({ error: "Failed to clear all wishlists" });
+    }
+}
+
+export async function getAllWishlists(req: Request, res: Response) {
+
+    try {
+        const wishlists = await WishlistService.getAllWishlist();
+        res.status(200).json({ success: true, wishlists });
+    } catch (error) {
+        console.error('Error retrieving all wishlists:', error);
+        res.status(500).json({ error: "Failed to retrieve all wishlists" });
+    }
+}
+
+export async function dropIndexes(req: Request, res: Response) {
+    try {
+        await WishlistService.dropIndexes();
+        res.status(200).json({
+            success: true,
+            message: "Indexes dropped successfully"
+        });
+    } catch (error) {
+        console.error('Error dropping indexes:', error);
+        res.status(500).json({ error: "Failed to drop indexes" });
+    }
+}
+
+export async function createIndexes(req: Request, res: Response) {
+    try {
+        await WishlistService.createIndexes();
+        res.status(200).json({
+            success: true,
+            message: "Indexes created successfully"
+        });
+    } catch (error) {
+        console.error('Error creating indexes:', error);
+        res.status(500).json({ error: "Failed to create indexes" });
     }
 }

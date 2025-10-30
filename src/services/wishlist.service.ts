@@ -3,18 +3,60 @@ import WishlistModel from '../models/wishlist.model';
 
 export class WishlistService {
 
-  static async addToWishlist(item: ICart): Promise<ICart | null> {
-    await WishlistModel.replaceOne(
-      { cartId: item.cartId },
-      item,
-      { upsert: true }
-    );
+  static async dropIndexes(): Promise<void> {
+    try {
+      await WishlistModel.collection.dropIndexes();
+    } catch (error) {
+      console.error('Error dropping indexes:', error);
+      throw error;
+    }
+  }
 
-    return await WishlistModel.findOne({ cartId: item.cartId });
+  static async createIndexes(): Promise<void> {
+    try {
+      await WishlistModel.collection.createIndex(
+        { cartId: 1 },
+        { unique: true, background: true } // background ile mevcut koleksiyon çalışırken de oluşturulur
+      );
+    } catch (error) {
+      console.error('Error creating indexes:', error);
+      throw error;
+    }
+  }
+
+  static async addToWishlist(item: ICart): Promise<ICart | null> {
+    const { cartId, ...dataWithoutCartId } = item;
+    try {
+
+      const { cartId, ...dataWithoutCartId } = item;
+
+      const wishlist = await WishlistModel.findOneAndUpdate(
+        { cartId },
+        {
+          $set: dataWithoutCartId,
+          $setOnInsert: { cartId },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
+      ).lean();
+
+      return wishlist as ICart;
+
+
+    } catch (error) {
+      console.error(`Wishlist add error for ${item.cartId}:`, error);
+      throw error;
+    }
   }
 
   static async getWishlist(userId: string): Promise<ICart | null> {
     return WishlistModel.findOne({ cartId: userId });
+  }
+  static async getAllWishlist(): Promise<ICart[]> {
+    return await WishlistModel.find();
   }
 
   static async removeFromWishlist(item: ICart): Promise<ICart | null> {
