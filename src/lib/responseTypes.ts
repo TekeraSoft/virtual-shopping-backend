@@ -22,4 +22,6 @@ export const responseTypes = {
     onlineStatusCannotChanged: "ONLINE_STATUS_CANNOT_CHANGED",
     friendRemoveFailed: "FRIEND_REMOVE_FAILED",
     friendRemoved: "FRIEND_REMOVED",
+    avatarChanged: "AVATAR_CHANGED",
+    avatarCannotChanged: "AVATAR_CANNOT_CHANGED"
 }

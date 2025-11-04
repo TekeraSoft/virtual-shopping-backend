@@ -47,11 +47,13 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
             const playerFriends = await UserService.getUserFriends(inviterPlayer.userId);
             const playerFriendList = playerFriends.map((friend) => {
+                const playerData = PlayerService.getPlayer(friend.userId);
                 const player = {
                     userId: friend.userId,
                     email: friend.email,
                     nameSurname: friend.nameSurname,
-                    online: PlayerService.getPlayer(friend.userId)?.online || false
+                    online: playerData?.online || false,
+                    avatarId: playerData?.avatarId
                 };
                 return player;
             });
@@ -63,11 +65,13 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
             console.log("invitedPlayer.socketId", invitedPlayer.socketId)
             const playerFriends = await UserService.getUserFriends(invitedPlayer.userId) || [];
             const playerFriendList = playerFriends.map((friend) => {
+                const playerData = PlayerService.getPlayer(friend.userId);
                 const player = {
                     userId: friend.userId,
                     email: friend.email,
                     nameSurname: friend.nameSurname,
-                    online: PlayerService.getPlayer(friend.userId)?.online || false
+                    online: playerData?.online || false,
+                    avatarId: playerData?.avatarId
                 };
                 return player;
             });
@@ -169,11 +173,13 @@ userRouter.post('/accept-friend', authenticate, async (req, res) => {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
             const playerFriends = await UserService.getUserFriends(inviterId);
             io.to(inviterPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+                const playerData = PlayerService.getPlayer(friend.userId);
                 const player = {
                     userId: friend.userId,
                     email: friend.email,
                     nameSurname: friend.nameSurname,
-                    online: PlayerService.getPlayer(friend.userId)?.online || false
+                    online: playerData?.online || false,
+                    avatarId: playerData?.avatarId || null
                 };
                 return player;
             }));
@@ -183,11 +189,13 @@ userRouter.post('/accept-friend', authenticate, async (req, res) => {
             const playerFriends = await UserService.getUserFriends(invitedPlayer.userId);
 
             io.to(invitedPlayer.socketId || '').emit('friend:added', playerFriends.map((friend) => {
+                const playerData = PlayerService.getPlayer(friend.userId);
                 const player = {
                     userId: friend.userId,
                     email: friend.email,
                     nameSurname: friend.nameSurname,
-                    online: PlayerService.getPlayer(friend.userId)?.online || false
+                    online: playerData?.online || false,
+                    avatarId: playerData?.avatarId
                 };
                 return player;
             }));
@@ -274,6 +282,7 @@ userRouter.post('/change-online-status', authenticate, async (req, res) => {
                 io.to(friendPlayer.socketId).emit('friend:status-changed', {
                     userId: user.userId,
                     online: online,
+                    avatarId: friendPlayer.avatarId
                 });
             }
         });
@@ -286,8 +295,21 @@ userRouter.post('/change-online-status', authenticate, async (req, res) => {
     }
 });
 
-
-
+userRouter.post('/set-avatar', authenticate, async (req, res) => {
+    const { avatarId } = req.body;
+    const user = req.user;
+    if (!user || !user.userId) {
+        res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
+        return;
+    }
+    try {
+        PlayerService.setAvatarId(user.userId, avatarId);
+        res.status(200).json({ responseType: responseTypes.avatarChanged, message: 'Avatar changed successfully' });
+    } catch (error) {
+        console.error('Error changing avatar:', error);
+        res.status(500).json({ responseType: responseTypes.avatarCannotChanged, message: 'Error changing avatar' });
+    }
+});
 
 
 export default userRouter;

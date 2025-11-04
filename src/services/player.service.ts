@@ -3,6 +3,7 @@ export interface IPlayer {
   socketId: string;
   roomId: string;
   online?: boolean;
+  avatarId?: string;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number, w: number };
   timestamp: number;
@@ -13,6 +14,7 @@ interface ICreatePlayer {
   socketId: string;
   timestamp: number;
   online: boolean;
+  avatarId: string;
 }
 
 // Global state: userId -> player data
@@ -40,12 +42,13 @@ export class PlayerService {
     });
   }
 
-  static createPlayer({ userId, socketId, online }: ICreatePlayer): ICreatePlayer {
+  static createPlayer({ userId, socketId, online, avatarId }: ICreatePlayer): ICreatePlayer {
     const newPlayer: ICreatePlayer = {
       userId,
       socketId,
       timestamp: Date.now(),
       online,
+      avatarId
     };
 
     // Store socket ID mapping
@@ -118,6 +121,12 @@ export class PlayerService {
       player.online = online;
       player.timestamp = Date.now();
       players.set(userId, player);
+    }
+  }
+  static setAvatarId(userId: string, avatarId: string): void {
+    const player = players.get(userId);
+    if (player) {
+      player.avatarId = avatarId;
     }
   }
 }

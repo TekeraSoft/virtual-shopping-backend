@@ -1,7 +1,7 @@
 export interface IRoom {
     roomId: string;
     timestamp: number;
-    players: Map<string, { socketId: string; nameSurname: string }>;
+    players: Map<string, { socketId: string; nameSurname: string, avatarId: string }>;
     invitedPlayers: Map<string, { nameSurname: string }>;
 }
 
@@ -10,12 +10,12 @@ const rooms: Map<string, IRoom> = new Map();
 
 export class RoomService {
 
-    static createRoom(userId: string, socketId: string, nameSurname: string): IRoom {
+    static createRoom(userId: string, socketId: string, nameSurname: string, avatarId: string): IRoom {
         const roomId = crypto.randomUUID();
         const newRoom: IRoom = {
             roomId: roomId,
             timestamp: Date.now(),
-            players: new Map([[userId, { socketId, nameSurname }]]),
+            players: new Map([[userId, { socketId, nameSurname, avatarId }]]),
             invitedPlayers: new Map(),
         };
         rooms.set(roomId, newRoom);
@@ -29,11 +29,11 @@ export class RoomService {
         return room;
     }
     // Add player to room
-    static addPlayerToRoom(roomId: string, socketId: string, userId: string, nameSurname: string): boolean {
+    static addPlayerToRoom(roomId: string, socketId: string, userId: string, nameSurname: string, avatarId: string): boolean {
         const room = rooms.get(roomId);
         if (room) {
             console.log("first player:", userId)
-            room.players.set(userId, { socketId, nameSurname });
+            room.players.set(userId, { socketId, nameSurname, avatarId });
             return true;
         }
 

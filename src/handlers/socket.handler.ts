@@ -39,12 +39,12 @@ export class SocketHandler {
 
   private handlePlayerEvents(socket: Socket): void {
     socket.on('player:create', async (data: {
-      userId: string, online: boolean
+      userId: string, online: boolean, avatarId: string
     }) => {
       const invitations = await UserService.getUserFriendInvitations(data.userId);
       console.log("player:create", data.userId, data.online)
       console.log("invitations for created:", invitations);
-      const player = PlayerService.createPlayer({ userId: data.userId, socketId: socket.id, online: data.online, timestamp: Date.now() });
+      const player = PlayerService.createPlayer({ userId: data.userId, avatarId: data.avatarId, socketId: socket.id, online: data.online, timestamp: Date.now() });
       const playerFriends = await UserService.getUserFriends(data.userId);
 
 
@@ -55,11 +55,13 @@ export class SocketHandler {
       console.log("invitationsExcludeFriend", invitationsExcludeFriend);
 
       const friendsWithStatus = playerFriends.map(friend => {
+        const playerData = PlayerService.getPlayer(friend.userId);
         return {
           userId: friend.userId,
           nameSurname: friend.nameSurname,
           email: friend.email,
-          online: PlayerService.getPlayer(friend.userId)?.online || false,
+          online: playerData?.online || false,
+          avatarId: playerData?.avatarId || null
         };
       });
 
@@ -120,7 +122,12 @@ export class SocketHandler {
   private handleRoomEvents(socket: Socket): void {
     socket.on('room:create', (data: { userId: string, nameSurname: string }) => {
       console.log("room:create by user:", data.userId);
-      const room = RoomService.createRoom(data.userId, socket.id, data.nameSurname);
+      const player = PlayerService.getPlayer(data.userId);
+      if (!player) {
+        console.error("User not found for room creation:", data.userId);
+        return;
+      }
+      const room = RoomService.createRoom(data.userId, socket.id, data.nameSurname, player.avatarId || "");
       socket.join(room.roomId);
       console.log("room", room);
       socket.emit('room:created', { roomId: room.roomId });
@@ -139,7 +146,12 @@ export class SocketHandler {
 
     socket.on('room:join', (data: { roomId: string; userId: string, nameSurname: string }) => {
       console.log("room join:", data.roomId, " by user:", data.userId);
-      RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId, data.nameSurname);
+      const player = PlayerService.getPlayer(data.userId);
+      if (!player) {
+        console.error("User not found for room join:", data.userId);
+        return;
+      }
+      RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId, data.nameSurname, player.avatarId || "");
       socket.join(data.roomId);
 
       socket.emit('room:joined', { roomId: data.roomId });
