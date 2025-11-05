@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { PlayerService } from '@services/player.service';
 import { UserService } from '@services/user.service';
-import { responseTypes } from 'src/lib/responseTypes';
+import { responseTypes } from '@lib/responseTypes';
 import { authenticate } from '@middlewares/authtenticate.checker';
 
 const userRouter = Router();

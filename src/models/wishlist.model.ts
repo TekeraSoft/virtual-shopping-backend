@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { ICart } from 'src/schemas/cart.scheme';
+import { ICart } from '@schemas/cart.scheme';
 
 // Define Product Attribute schema
 const ProductAttributeSchema = new Schema({

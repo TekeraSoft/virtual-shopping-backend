@@ -12,7 +12,9 @@
       "@routes/*": ["src/routes/*"],
       "@middlewares/*": ["src/middlewares/*"],
       "@lib/*": ["src/lib/*"],
-      "@schemas/*": ["src/schemas/*"]
+      "@data/*": ["src/data/*"],
+      "@schemas/*": ["src/schemas/*"],
+      "@models/*": ["src/models/*"]
     },
     "strict": true,
     "esModuleInterop": true,

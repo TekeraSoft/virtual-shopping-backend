@@ -1,8 +1,8 @@
 // src/services/user.service.ts
 import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { IUserPayload, TUserTypes } from "../types/user/types";
-import { users } from "src/data/users";
-import { Friend, IFriend } from "src/models/friend.model";
+import { users } from "@data/users";
+import { Friend, IFriend } from "@models/friend.model";
 import { InvitationService } from "./invitation.service";
 
 

@@ -1,6 +1,6 @@
 import { Request } from "express";
-import { api_base_url } from "src/lib/urls";
-import { IAddToCartItem, ICart } from "src/schemas/cart.scheme";
+import { api_base_url } from "@lib/urls";
+import { IAddToCartItem, ICart } from "@schemas/cart.scheme";
 
 export async function addToCart(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
     const cartItem: IAddToCartItem = req.body;

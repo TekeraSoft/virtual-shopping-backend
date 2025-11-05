@@ -1,4 +1,4 @@
-import { ICart } from 'src/schemas/cart.scheme';
+import { ICart } from '@schemas/cart.scheme';
 import WishlistModel from '../models/wishlist.model';
 
 export class WishlistService {

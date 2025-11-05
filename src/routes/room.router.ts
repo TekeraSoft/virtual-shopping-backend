@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserService } from '@services/user.service';
 import { RoomService } from '@services/room.service';
-import { responseTypes } from 'src/lib/responseTypes';
+import { responseTypes } from '@lib/responseTypes';
 import { PlayerService } from '@services/player.service';
 import { authenticate } from '@middlewares/authtenticate.checker';
 

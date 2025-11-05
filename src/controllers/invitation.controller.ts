@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { InvitationService } from '../services/invitation.service';
 import { responseTypes } from '../lib/responseTypes';
-import { users } from 'src/data/users';
+import { users } from '@data/users';
 
 export class InvitationController {
 
