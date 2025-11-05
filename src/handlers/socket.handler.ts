@@ -85,6 +85,14 @@ export class SocketHandler {
       }
     });
 
+    socket.on("player:animTrigger", (data: { userId: string; roomId: string; triggerName: string }) => {
+      // Broadcast to other players in the room
+      socket.to(data.roomId).emit("player:animTrigger", {
+        userId: data.userId,
+        triggerName: data.triggerName
+      });
+    });
+
     socket.on('player:update', (data: {
       userId: string;
       roomId: string;
