@@ -10,7 +10,9 @@
       "@utils/*": ["src/utils/*"],
       "@controllers/*": ["src/controllers/*"],
       "@routes/*": ["src/routes/*"],
-      "@middlewares/*": ["src/middlewares/*"]
+      "@middlewares/*": ["src/middlewares/*"],
+      "@lib/*": ["src/lib/*"],
+      "@schemas/*": ["src/schemas/*"]
     },
     "strict": true,
     "esModuleInterop": true,

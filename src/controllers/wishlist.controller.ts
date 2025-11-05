@@ -2,8 +2,8 @@
 import { Request, Response } from "express";
 import { WishlistService } from "@services/wishlist.service";
 import { addToCart, clearCart, deleteFromCart, getCartItems } from "./cart.controller";
-import { IAddToCartItem } from "src/schemas/cart.scheme";
-import { cartSummarizer } from "src/lib/cartSummarizer";
+import { IAddToCartItem } from "@schemas/cart.scheme";
+import { cartSummarizer } from "@lib/cartSummarizer";
 
 export async function addToWishlist(req: Request, res: Response) {
     const user = req.user;
