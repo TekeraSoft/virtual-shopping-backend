@@ -98,13 +98,15 @@ export class SocketHandler {
       roomId: string;
       position: { x: number; y: number; z: number };
       rotation: { x: number; y: number; z: number, w: number };
+      isGrounded: boolean;
     }) => {
       PlayerService.updatePlayerPosition(
         data.userId,
         data.roomId,
         socket.id,
         data.position,
-        data.rotation
+        data.rotation,
+        data.isGrounded
       );
 
       // console.log("player moved:", socket.id, { userId: data.userId, position: data.position, rotation: data.rotation });

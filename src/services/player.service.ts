@@ -7,6 +7,7 @@ export interface IPlayer {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number, w: number };
   timestamp: number;
+  isGrounded: boolean;
 }
 
 interface ICreatePlayer {
@@ -29,7 +30,8 @@ export class PlayerService {
     roomId: string,
     socketId: string,
     position: { x: number; y: number; z: number },
-    rotation: { x: number; y: number; z: number, w: number }
+    rotation: { x: number; y: number; z: number, w: number },
+    isGrounded: boolean
   ): void {
     // console.log("player updated:", { socketId, userId, roomId, position, rotation });
     players.set(userId, {
@@ -38,6 +40,7 @@ export class PlayerService {
       socketId,
       position,
       rotation,
+      isGrounded,
       timestamp: Date.now()
     });
   }
@@ -48,7 +51,7 @@ export class PlayerService {
       socketId,
       timestamp: Date.now(),
       online,
-      avatarId
+      avatarId,
     };
 
     // Store socket ID mapping
@@ -62,7 +65,8 @@ export class PlayerService {
       online: online,
       position: { x: 0, y: 0, z: 0 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      isGrounded: true
     });
     return newPlayer;
   }
