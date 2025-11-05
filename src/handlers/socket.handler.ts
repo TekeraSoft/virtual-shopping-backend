@@ -114,7 +114,8 @@ export class SocketHandler {
       socket.to(data.roomId).emit('player:moved', {
         userId: data.userId,
         position: data.position,
-        rotation: data.rotation
+        rotation: data.rotation,
+        isGrounded: data.isGrounded
       });
     });
 
