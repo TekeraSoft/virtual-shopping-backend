@@ -42,7 +42,7 @@ export class SocketHandler {
       userId: string, online: boolean, avatarId: string
     }) => {
       const invitations = await UserService.getUserFriendInvitations(data.userId);
-      console.log("player:create", data.userId, data.online)
+      console.log("player:create", data.userId, data.online, "avatarId:", data.avatarId)
       console.log("invitations for created:", invitations);
       const player = PlayerService.createPlayer({ userId: data.userId, avatarId: data.avatarId, socketId: socket.id, online: data.online, timestamp: Date.now() });
       const playerFriends = await UserService.getUserFriends(data.userId);
@@ -156,7 +156,7 @@ export class SocketHandler {
 
       socket.emit('room:joined', { roomId: data.roomId });
       // Notify other users in the room
-      socket.to(data.roomId).emit('room:joined', { userId: data.userId, nameSurname: data.nameSurname });
+      socket.to(data.roomId).emit('room:joined', { userId: data.userId, nameSurname: data.nameSurname, avatarId: player.avatarId });
     });
 
     socket.on('room:getusers', (data: { roomId: string; }) => {
@@ -164,7 +164,7 @@ export class SocketHandler {
       const roomResponse = {
         roomId: roomObj?.roomId,
         timestamp: roomObj?.timestamp,
-        players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, { socketId, nameSurname }]) => ({ userId, socketId, nameSurname })) : []
+        players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, { socketId, nameSurname, avatarId }]) => ({ userId, socketId, nameSurname, avatarId })) : []
       };
       console.log("room:getusers:", roomResponse);
 
