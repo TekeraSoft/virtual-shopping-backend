@@ -52,5 +52,18 @@ export const users = [
         "sub": "ramazanertan2@gmail.com",
         "iat": 1760771635,
         "exp": 1760772535
+    },
+    {
+        "phoneNumber": "",
+        "roles": [
+            "CUSTOMER"
+        ],
+        "nameSurname": "Raşit Kenger",
+        "tokenType": "access",
+        "userId": "13406fd6-475c-48c3-8d55-697958a7d944",
+        "email": "radoktr.rasit@gmail.com",
+        "sub": "radoktr.rasit@gmail.com",
+        "iat": 1762430900,
+        "exp": 1762431800
     }
 ]
