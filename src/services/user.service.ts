@@ -122,9 +122,9 @@ export class UserService {
         }
     }
 
-    static async hasUserInvited(userId: string, invitedId: string): Promise<boolean> {
+    static async hasUserInvited(inviterId: string, invitedId: string): Promise<boolean> {
         try {
-            const invitation = await InvitationService.getInvitation(userId, invitedId);
+            const invitation = await InvitationService.getInvitation(inviterId, invitedId);
             return !!invitation;
         } catch (error) {
             console.error('Error checking invitation in DB:', error);

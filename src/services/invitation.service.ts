@@ -57,9 +57,9 @@ export class InvitationService {
      * @param friendId - ID of the user who received invitations
      * @returns Array of invitations received by the user
      */
-    static async getInvitationsForInvited(friendId: string): Promise<IInvitation[]> {
+    static async getInvitationsForInvited(invitedId: string): Promise<IInvitation[]> {
         try {
-            const invitations = await Invitation.find({ invitedId: friendId }).sort({ createdAt: -1 });
+            const invitations = await Invitation.find({ invitedId: invitedId }).sort({ createdAt: -1 });
             return invitations;
         } catch (error) {
             console.error('Error fetching invitations for invited user:', error);
@@ -89,9 +89,9 @@ export class InvitationService {
      * @param friendId - ID of the user who received the invitation
      * @returns Invitation document if exists, null otherwise
      */
-    static async getInvitation(userId: string, friendId: string): Promise<IInvitation | null> {
+    static async getInvitation(inviterId: string, invitedId: string): Promise<IInvitation | null> {
         try {
-            const invitation = await Invitation.findOne({ inviterId: userId, invitedId: friendId });
+            const invitation = await Invitation.findOne({ inviterId: inviterId, invitedId: invitedId });
             return invitation;
         } catch (error) {
             console.error('Error fetching invitation:', error);
@@ -105,14 +105,14 @@ export class InvitationService {
      * @param userId2 - Second user ID
      * @returns Object with both invitations if they exist
      */
-    static async getMutualInvitation(userId1: string, userId2: string): Promise<{
+    static async getMutualInvitation(inviterId: string, invitedId: string): Promise<{
         user1ToUser2: IInvitation | null;
         user2ToUser1: IInvitation | null;
     }> {
         try {
             const [invitation1, invitation2] = await Promise.all([
-                Invitation.findOne({ inviterId: userId1, invitedId: userId2 }),
-                Invitation.findOne({ inviterId: userId2, invitedId: userId1 })
+                Invitation.findOne({ inviterId: inviterId, invitedId: invitedId }),
+                Invitation.findOne({ inviterId: invitedId, invitedId: inviterId })
             ]);
 
             return {

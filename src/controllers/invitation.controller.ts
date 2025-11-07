@@ -41,7 +41,7 @@ export class InvitationController {
                 return;
             }
 
-            const invitation = await InvitationService.createInvitation(userId, friendId);
+            const invitation = await InvitationService.createInvitation(friendId, userId,);
 
             res.status(201).json({
                 success: true,

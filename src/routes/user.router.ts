@@ -20,29 +20,36 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
         return;
     }
 
-    const metaUser = UserService.getUserInfoWithId(user.userId);
-    if (!metaUser) {
+    const inviterUser = UserService.getUserInfoWithId(user.userId);
+
+    if (!inviterUser) {
         res.status(422).json({ responseType: responseTypes.userNotFound, message: 'Kullanıcı bulunamadı.' });
         return;
     }
-    const myFriends = await UserService.getUserFriends(user.userId) || [];
+
+    const myFriends = await UserService.getUserFriends(inviterUser.userId) || [];
 
     if (myFriends.find(friend => friend.email === email)) {
         res.status(403).json({ responseType: responseTypes.userAlreadyFriend, message: 'User is already your friend' });
         return;
     }
     const invitedUser = UserService.getUserInfoWithEmail(email);
+
     if (!invitedUser) {
         res.status(404).json({ responseType: responseTypes.invitedUserNotFound, message: 'Davet edilen kullanıcı bulunamadı.' });
         return;
     }
-    const invitedUserInviteMe = await UserService.hasUserInvited(metaUser.userId, invitedUser.userId);
+    const invitedUserInviteMe = await UserService.hasUserInvited(invitedUser.userId, inviterUser.userId);
     if (invitedUserInviteMe) {
+
         console.log("inviteduser invite me")
-        await UserService.addUserToFriendList(user.userId, invitedUser);
-        await UserService.addUserToFriendList(invitedUser.userId, metaUser);
-        const inviterPlayer = PlayerService.getPlayer(invitedUser.userId);
-        const invitedPlayer = PlayerService.getPlayer(user.userId);
+
+        await UserService.addUserToFriendList(inviterUser.userId, invitedUser);
+        await UserService.addUserToFriendList(invitedUser.userId, inviterUser);
+
+        const inviterPlayer = PlayerService.getPlayer(inviterUser.userId);
+        const invitedPlayer = PlayerService.getPlayer(invitedUser.userId);
+
         if (inviterPlayer) {
             console.log("inviterPlayer.socketId", inviterPlayer.socketId)
             const playerFriends = await UserService.getUserFriends(inviterPlayer.userId);
@@ -84,17 +91,17 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
         res.status(201).json({ responseType: responseTypes.invitationTwoDirectional, message: 'Bu kullanıcı sizi zaten davet etti. Davet otomatik olarak kabul edildi.', });
         return;
     }
-    const hasInvited = await UserService.hasUserInvited(invitedUser.userId, metaUser.userId);
+    const hasInvited = await UserService.hasUserInvited(inviterUser.userId, invitedUser.userId);
     if (hasInvited) {
         res.status(409).json({ responseType: responseTypes.friendRequestAlreadySent, message: 'You have already invited this user' });
         return;
     }
 
     const userInvited = UserService.getUserInfoWithEmail(email)
-    const userInviter = UserService.getUserInfoWithId(user.userId);
-    if (userInvited && userInviter) {
+
+    if (userInvited && inviterUser) {
         console.log("userInvited ve inviter var")
-        await UserService.inviteFriend(userInvited.userId, userInviter.userId);
+        await UserService.inviteFriend(userInvited.userId, inviterUser.userId);
 
         // Check if invited user is online and send socket notification
         const invitedPlayer = PlayerService.getPlayer(userInvited.userId);
@@ -104,9 +111,9 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
             const invitedSocketId = invitedPlayer.socketId;
             if (invitedSocketId) {
                 io.to(invitedSocketId).emit('friend:invitation-received', {
-                    inviterId: userInviter.userId,
-                    inviterName: userInviter.nameSurname,
-                    message: `${userInviter.nameSurname} sizi arkadaş olarak ekledi!`,
+                    inviterId: inviterUser.userId,
+                    inviterName: inviterUser.nameSurname,
+                    message: `${inviterUser.nameSurname} sizi arkadaş olarak ekledi!`,
                     timestamp: Date.now()
                 });
             }
