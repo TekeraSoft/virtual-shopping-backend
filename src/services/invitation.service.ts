@@ -2,6 +2,15 @@ import { Invitation, IInvitation } from '../models/invitation.model';
 
 export class InvitationService {
 
+    static async dropIndexes(): Promise<void> {
+        try {
+            await Invitation.collection.dropIndexes();
+        } catch (error) {
+            console.error('Error dropping indexes:', error);
+            throw error;
+        }
+    }
+
     /**
      * Create a new invitation
      * @param userId - ID of the user sending the invitation
@@ -9,6 +18,7 @@ export class InvitationService {
      * @returns Created invitation document
      * @throws Error if invitation already exists
      */
+
     static async createInvitation(invitedId: string, inviterId: string): Promise<IInvitation> {
         try {
             const newInvitation = new Invitation({
@@ -34,7 +44,7 @@ export class InvitationService {
      */
     static async getInvitationsForInviter(userId: string): Promise<IInvitation[]> {
         try {
-            const invitations = await Invitation.find({ userId }).sort({ createdAt: -1 });
+            const invitations = await Invitation.find({ inviterId: userId }).sort({ createdAt: -1 });
             return invitations;
         } catch (error) {
             console.error('Error fetching invitations for inviter:', error);
@@ -49,7 +59,7 @@ export class InvitationService {
      */
     static async getInvitationsForInvited(friendId: string): Promise<IInvitation[]> {
         try {
-            const invitations = await Invitation.find({ friendId }).sort({ createdAt: -1 });
+            const invitations = await Invitation.find({ invitedId: friendId }).sort({ createdAt: -1 });
             return invitations;
         } catch (error) {
             console.error('Error fetching invitations for invited user:', error);
@@ -65,7 +75,7 @@ export class InvitationService {
      */
     static async removeInvitation(userId: string, friendId: string): Promise<boolean> {
         try {
-            const result = await Invitation.deleteOne({ userId, friendId });
+            const result = await Invitation.deleteOne({ inviterId: userId, invitedId: friendId });
             return result.deletedCount > 0;
         } catch (error) {
             console.error('Error removing invitation:', error);
@@ -81,7 +91,7 @@ export class InvitationService {
      */
     static async getInvitation(userId: string, friendId: string): Promise<IInvitation | null> {
         try {
-            const invitation = await Invitation.findOne({ userId, friendId });
+            const invitation = await Invitation.findOne({ inviterId: userId, invitedId: friendId });
             return invitation;
         } catch (error) {
             console.error('Error fetching invitation:', error);
@@ -101,8 +111,8 @@ export class InvitationService {
     }> {
         try {
             const [invitation1, invitation2] = await Promise.all([
-                Invitation.findOne({ userId: userId1, friendId: userId2 }),
-                Invitation.findOne({ userId: userId2, friendId: userId1 })
+                Invitation.findOne({ inviterId: userId1, invitedId: userId2 }),
+                Invitation.findOne({ inviterId: userId2, invitedId: userId1 })
             ]);
 
             return {

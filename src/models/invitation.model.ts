@@ -22,10 +22,10 @@ const invitationSchema: Schema = new Schema({
 });
 
 // Compound index - bir kişi aynı kişiyi birden fazla kez davet edemesin
-invitationSchema.index({ userId: 1, friendId: 1 }, { unique: true });
+invitationSchema.index({ inviterId: 1, invitedId: 1 }, { unique: true });
 
 // İndexler sorgu performansını artırır (duplicate uyarısını önlemek için tek tek tanımlıyoruz)
-invitationSchema.index({ userId: 1 });
-invitationSchema.index({ friendId: 1 });
+invitationSchema.index({ inviterId: 1 });
+invitationSchema.index({ invitedId: 1 });
 
 export const Invitation = mongoose.model<IInvitation>('Invitation', invitationSchema);

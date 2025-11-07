@@ -65,6 +65,7 @@ export class InvitationController {
                 error: error.message
             });
             console.error('Error creating invitation:', error);
+            return;
         }
     }
 
