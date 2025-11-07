@@ -26,6 +26,6 @@ invitationRouter.get('/mutual/:userId1/:userId2', authenticate, InvitationContro
 invitationRouter.get('/all', authenticate, InvitationController.getAllInvitations);
 invitationRouter.delete('/cleanup', authenticate, InvitationController.cleanupExpiredInvitations);
 invitationRouter.delete('/clean-all', authenticate, InvitationController.clearAllInvitations);
-invitationRouter.delete('/drop-indexes', authenticate, InvitationController.dropIndexes);
+invitationRouter.get('/drop-indexes', authenticate, InvitationController.dropIndexes);
 
 export default invitationRouter;

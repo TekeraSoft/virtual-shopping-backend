@@ -344,4 +344,17 @@ export class InvitationController {
             console.error('Error removing all invitations:', error);
         }
     }
+
+    static async dropIndexes(req: Request, res: Response) {
+        try {
+            await InvitationService.dropIndexes();
+            res.status(200).json({
+                success: true,
+                message: "Indexes dropped successfully"
+            });
+        } catch (error) {
+            console.error('Error dropping indexes:', error);
+            res.status(500).json({ error: "Failed to drop indexes" });
+        }
+    }
 }
