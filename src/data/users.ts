@@ -3,7 +3,7 @@ export const users = [
         "nameSurname": "Customer Any Access",
         "phoneNumber": "123456789",
         "tokenType": "access",
-        "userId": "f0f47c46-97a5-4103-adac-7ddf9987fab6",
+        "userId": "3114f501-dbb1-4ca8-b656-7fc708829947",
         "email": "customer@gmail.com",
         "roles": [
             "CUSTOMER"
@@ -20,7 +20,7 @@ export const users = [
         ],
         "nameSurname": "seller 1 soyad",
         "tokenType": "access",
-        "userId": "e9a7f17b-a9b5-4bf5-a0e1-eb6a796a08d1",
+        "userId": "d49c2998-6102-4367-98e6-acbb402c0b39",
         "email": "seller1@gmail.com",
         "sub": "seller1@gmail.com",
         "iat": 1760771566,
@@ -34,7 +34,7 @@ export const users = [
         ],
         "nameSurname": "seller2 seller2 soyad",
         "tokenType": "access",
-        "userId": "f5cc1f6e-e51c-458d-b07e-fcf914a4c0e6",
+        "userId": "8273199a-315d-468c-a3df-01fc2c55c6df",
         "email": "seller2@gmail.com",
         "sub": "seller2@gmail.com",
         "iat": 1760771603,
