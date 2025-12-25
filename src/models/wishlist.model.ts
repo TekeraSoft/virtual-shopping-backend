@@ -105,8 +105,8 @@ const WishlistSchema = new Schema<ICart>({
     shippingPrice: { type: Number, required: false },
     grandTotal: { type: Number, required: false },
     sellerGroups: [SellerGroupSchema],
-    sellerCampaigns: { type: [Schema.Types.Mixed], default: [] },
-    sellerShipping: { type: [Schema.Types.Mixed], default: [] },
+    sellerCampaigns: { type: Schema.Types.Mixed, default: [] },
+    sellerShipping: { type: Schema.Types.Mixed, default: [] },
 });
 
 const WishlistModel = mongoose.model<ICart>('Wishlist', WishlistSchema);
