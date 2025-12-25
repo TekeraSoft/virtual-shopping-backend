@@ -19,7 +19,7 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
         );
         const data = await resp.json();
         console.log("addtoCartData from api is success")
-        return { success: true, message: data.message || "", data: data };
+        return { success: true, message: data.message || "", data: data as ICart };
 
     } catch (error: Error | any) {
         console.log("error", error)
@@ -27,11 +27,11 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
     }
 }
 
-export async function deleteFromCart(req: Request, attributeId: string): Promise<{ success: boolean; message: string; data: any | null }> {
+export async function deleteFromCart(req: Request, sellerListingId: string): Promise<{ success: boolean; message: string; data: any | null }> {
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
     try {
-        const response = await fetch(api_base_url + `/cart/removeFromCart?attributeId=${attributeId}`, {
+        const response = await fetch(api_base_url + `/cart/removeFromCart?sellerListingId=${sellerListingId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
 
@@ -67,7 +67,7 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
         }
 
         const data = await response.json();
-        console.log("cartId in getcartitems", data.cartId);
+        console.log("cartId in getcartitems", data.id);
 
         return { success: true, message: data.message, data: data as ICart };
     } catch (error: any) {
