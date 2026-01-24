@@ -13,13 +13,19 @@ export async function addToWishlist(req: Request, res: Response) {
         return;
     }
 
-    const item: IAddToCartItem = req.body;
-
-    if (!item || !item.sellerListingId || item.quantity < 1) {
-        res.status(400).json({ error: "Invalid item data" });
+    const body = req.body;
+    const sellerListingId = body.sellerListingId || body.attributeId;
+    
+    if (!sellerListingId || !body.quantity || body.quantity < 1) {
+        console.log("addToWishlist invalid data:", JSON.stringify(body));
+        res.status(400).json({ error: "Invalid item data. sellerListingId/attributeId and quantity are required" });
         return;
     }
 
+    req.body = {
+        sellerListingId: sellerListingId,
+        quantity: body.quantity
+    };
 
     const isAddedToCart = await addToCart(req);
     if (!isAddedToCart.success || !isAddedToCart.data) {
@@ -91,40 +97,50 @@ export async function getMyWishlist(req: Request, res: Response) {
 
 export async function removeFromWishlist(req: Request, res: Response) {
     const user = req.user;
-    const sellerListingId = req.query.sellerListingId as string;
+    const sellerListingId = (req.query.sellerListingId as string) || (req.query.attributeId as string);
 
     if (!user || !user.userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
     }
     if (!sellerListingId) {
-        res.status(400).json({ error: "sellerListingId is required" });
+        console.log("removeFromWishlist missing param:", JSON.stringify(req.query));
+        res.status(400).json({ error: "sellerListingId or attributeId is required" });
         return;
     }
 
-    const isDeletedFromCart = await deleteFromCart(req, sellerListingId);
+    const cart = await getCartItems(req);
+    if (!cart.success) {
+        res.status(500).json({ error: "Failed to retrieve cart items" });
+        return;
+    }
+    
+    const cartId = cart.data?.id;
+    console.log("removeFromWishlist cartId", cartId, "sellerListingId", sellerListingId);
+
+    const isDeletedFromCart = await deleteFromCart(req, sellerListingId, cartId);
     if (!isDeletedFromCart.success) {
-        res.status(500).json({ error: "Failed to remove item from cart" });
+        res.status(500).json({ error: isDeletedFromCart.message || "Failed to remove item from cart" });
         return;
     }
 
     console.log("Item removed from cart:", isDeletedFromCart.data);
 
-    const cart = await getCartItems(req);
-    console.log("removeFromWishlist cartId", cart.data?.id);
-    const wishlistId = cart.data?.id ?? user.userId;
-    if (!cart.success) {
-        res.status(500).json({ error: "Failed to retrieve cart items" });
+    const updatedCart = await getCartItems(req);
+    const wishlistId = updatedCart.data?.id ?? user.userId;
+    
+    if (!updatedCart.success) {
+        res.status(500).json({ error: "Failed to retrieve updated cart items" });
         return;
     }
 
-    if (!cart.data) {
+    if (!updatedCart.data) {
         res.status(200).json({ wishlist: null });
         await WishlistService.clearWishlist(wishlistId);
         return;
     }
 
-    const removed = await WishlistService.removeFromWishlist(cart.data);
+    const removed = await WishlistService.removeFromWishlist(updatedCart.data);
 
     if (removed) {
         const updatedWishlist = await WishlistService.getWishlist(wishlistId);

@@ -3,22 +3,55 @@ import { api_base_url } from "@lib/urls";
 import { IAddToCartItem, ICart } from "@schemas/cart.scheme";
 
 export async function addToCart(req: Request): Promise<{ success: boolean; message: string; data: ICart | null }> {
-    const cartItem: IAddToCartItem = req.body;
+    const body = req.body;
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
-    console.log("token", token);
-    console.log("cartItem", cartItem)
+    
+    const sellerListingId = body.sellerListingId || body.attributeId;
+    const quantity = body.quantity;
+    
+    if (!sellerListingId || !quantity || quantity < 1) {
+        return { success: false, message: "sellerListingId and quantity are required", data: null };
+    }
+    
+    console.log("addToCart - sellerListingId:", sellerListingId, "quantity:", quantity);
+    
     try {
+        const url = api_base_url + `/cart/addToCart`;
+        const requestBody = {
+            sellerListingId: sellerListingId,
+            quantity: String(quantity),
+        };
+        const bodyString = JSON.stringify(requestBody);
+        console.log("addToCart URL", url);
+        console.log("addToCart request body", bodyString);
+        
         const resp = await fetch(
-            api_base_url + `/cart/addToCart`,
+            url,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
-                body: JSON.stringify([cartItem]),
+                body: bodyString,
             }
         );
-        const data = await resp.json();
-        console.log("addtoCartData from api is success")
+
+        const contentType = resp.headers.get("content-type") || "";
+        const raw = await resp.text();
+        console.log("addToCart status", resp.status, contentType);
+        console.log("addToCart raw body (first 400)", raw.slice(0, 400));
+
+        if (!resp.ok) {
+            return { success: false, message: `addToCart http ${resp.status}`, data: null };
+        }
+
+        let data: any;
+        try {
+            data = contentType.includes("application/json") ? JSON.parse(raw) : JSON.parse(raw);
+        } catch (e: any) {
+            return { success: false, message: "addToCart json parse failed", data: null };
+        }
+
+        console.log("addtoCartData from api is success");
         return { success: true, message: data.message || "", data: data as ICart };
 
     } catch (error: Error | any) {
@@ -27,22 +60,45 @@ export async function addToCart(req: Request): Promise<{ success: boolean; messa
     }
 }
 
-export async function deleteFromCart(req: Request, sellerListingId: string): Promise<{ success: boolean; message: string; data: any | null }> {
+export async function deleteFromCart(req: Request, sellerListingId: string, cartId?: string): Promise<{ success: boolean; message: string; data: any | null }> {
     const authHeader = req.header("Authorization");
     const token = authHeader ? authHeader.split(" ")[1] : null;
+    const user = req.user as any;
+
+    const cartOwnerId = cartId || user?.userId;
+    
+    if (!cartOwnerId) {
+        return { success: false, message: "cartId or userId is required", data: null };
+    }
+    
     try {
-        const response = await fetch(api_base_url + `/cart/removeFromCart?sellerListingId=${sellerListingId}`, {
+        const url = api_base_url + `/cart/removeFromCart`;
+        const requestBody = {
+            cartId: cartId || cartOwnerId,
+            sellerListingId: sellerListingId
+        };
+        const bodyString = JSON.stringify(requestBody);
+        console.log("deleteFromCart URL", url);
+        console.log("deleteFromCart request body", bodyString);
+        
+        const response = await fetch(url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
-
+            body: bodyString,
         });
 
+        const contentType = response.headers.get("content-type") || "";
+        const raw = await response.text();
+        console.log("deleteFromCart status", response.status, contentType);
+        console.log("deleteFromCart raw body (first 400)", raw.slice(0, 400));
+
         if (!response.ok) {
-            return { success: false, message: "Failed to delete item from cart.", data: null };
+            return { success: false, message: `deleteFromCart http ${response.status}: ${raw.slice(0, 200)}`, data: null };
         }
 
-        return { success: true, message: "cart cleared", data: null };
+        return { success: true, message: "Item removed from cart", data: null };
     } catch (error: any) {
+        console.log("deleteFromCart error", error);
         return { success: false, message: error.message || "Ürün sepete eklenemedi.", data: null };
     }
 }
@@ -53,7 +109,11 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
     console.log("token", token);
 
     try {
-        const response = await fetch(api_base_url + `/cart/getCart?guestUserId=`,
+        const user = req.user as any;
+        const cartOwnerId = user?.userId;
+        const url = api_base_url + (cartOwnerId ? `/cart/getCart?cartOwnerId=${cartOwnerId}` : `/cart/getCart?guestUserId=`);
+        console.log("getCartItems URL", url);
+        const response = await fetch(url,
             {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json', ...(token && { "Authorization": `Bearer ${token}` }) },
@@ -61,12 +121,22 @@ export async function getCartItems(req: Request): Promise<{ success: boolean; me
             });
 
 
-        // Check if the response body is empty
-        if (!response.body || response.headers.get('content-length') === '0') {
-            return { success: true, message: "Empty response body", data: null };
+        const contentType = response.headers.get("content-type") || "";
+        const raw = await response.text();
+        console.log("getCartItems status", response.status, contentType);
+        console.log("getCartItems raw body (first 400)", raw.slice(0, 400));
+
+        if (!response.ok) {
+            return { success: false, message: `getCartItems http ${response.status}`, data: null };
         }
 
-        const data = await response.json();
+        let data: any;
+        try {
+            data = contentType.includes("application/json") ? JSON.parse(raw) : JSON.parse(raw);
+        } catch (e: any) {
+            return { success: false, message: "getCartItems json parse failed", data: null };
+        }
+
         console.log("cartId in getcartitems", data.id);
 
         return { success: true, message: data.message, data: data as ICart };

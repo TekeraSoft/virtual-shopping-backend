@@ -1,8 +1,16 @@
 import { z } from "zod";
 
 export const AddToCartItemScheme = z.object({
-    sellerListingId: z.string().min(1, "Product ID is required"),
+    sellerListingId: z.string().optional(),
+    attributeId: z.string().optional(), 
+    productId: z.string().optional(), 
+    variationId: z.string().optional(), 
     quantity: z.number().min(1, "Quantity must be at least 1"),
+}).refine((data) => {
+    
+    return !!(data.sellerListingId || data.attributeId);
+}, {
+    message: "Either sellerListingId or attributeId is required"
 });
 
 export interface IAddToCartItem extends z.infer<typeof AddToCartItemScheme> { }
