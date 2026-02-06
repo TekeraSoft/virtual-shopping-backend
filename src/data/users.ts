@@ -1,16 +1,17 @@
 export const users = [
     {
-        "nameSurname": "Customer Any Access",
-        "phoneNumber": "123456789",
-        "tokenType": "access",
-        "userId": "3114f501-dbb1-4ca8-b656-7fc708829947",
-        "email": "customer@gmail.com",
-        "roles": [
-            "CUSTOMER"
-        ],
-        "sub": "customer@gmail.com",
-        "iat": 1760771402,
-        "exp": 1760772302
+      "avatarId": "6970bdf507fdcf896003f1ea",
+      "phoneNumber": "",
+      "roles": [
+        "CUSTOMER"
+      ],
+      "nameSurname": "Customer Customer",
+      "tokenType": "access",
+      "userId": "645981db-62c8-46d7-bc51-82cb46ee2e34",
+      "email": "customer@gmail.com",
+      "sub": "customer@gmail.com",
+      "iat": 1770121803,
+      "exp": 1770726603
     },
     {
         "sellerId": "d706b88f-8ebe-4efe-8041-a0e21bece28e",
@@ -65,5 +66,19 @@ export const users = [
         "sub": "radoktr.rasit@gmail.com",
         "iat": 1762430900,
         "exp": 1762431800
+    },
+    {
+      "avatarId": "69773511ea77ff02ff093ca6",
+      "phoneNumber": "",
+      "roles": [
+        "CUSTOMER"
+      ],
+      "nameSurname": "Ramazan DİZMAN",
+      "tokenType": "access",
+      "userId": "d7b7656f-066e-454b-acdc-342e4316c4a1",
+      "email": "rambodizma972n@gmail.com",
+      "sub": "rambodizma972n@gmail.com",
+      "iat": 1770120989,
+      "exp": 1770725789
     }
 ]

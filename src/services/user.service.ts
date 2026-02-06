@@ -1,9 +1,9 @@
 // src/services/user.service.ts
 import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { IUserPayload, TUserTypes } from "../types/user/types";
-import { users } from "@data/users";
 import { Friend, IFriend } from "@models/friend.model";
 import { InvitationService } from "./invitation.service";
+import { user_api_base_url } from "@lib/urls";
 
 
 export class UserService {
@@ -30,27 +30,22 @@ export class UserService {
         }
     }
 
-    static getUserInfoWithEmail(email: string): IUserPayload | null {
-
-        const user = users.find(user => user.email === email);
-        return user
-            ? {
-                ...user,
-                roles: user.roles.map(role => role as TUserTypes),
-                sellerId: user.sellerId ?? "",
-            }
-            : null;
+    static async getUserInfoWithEmail(email: string): Promise<IUserPayload | null> {
+        const normalizedEmail = email?.trim().toLowerCase();
+        if (!normalizedEmail) {
+            return null;
+        }
+        const url = `${user_api_base_url}/user/by-email?email=${encodeURIComponent(normalizedEmail)}`;
+        return this.fetchUser(url);
     }
-    static getUserInfoWithId(id: string): IUserPayload | null {
 
-        const user = users.find(user => user.userId === id);
-        return user
-            ? {
-                ...user,
-                roles: user.roles.map(role => role as TUserTypes),
-                sellerId: user.sellerId ?? "",
-            }
-            : null;
+    static async getUserInfoWithId(id: string): Promise<IUserPayload | null> {
+        const normalizedId = id?.trim();
+        if (!normalizedId) {
+            return null;
+        }
+        const url = `${user_api_base_url}/user/by-id/${encodeURIComponent(normalizedId)}`;
+        return this.fetchUser(url);
     }
     /**
      * Add a friend to a user's friend list (persisted in DB)
@@ -91,33 +86,11 @@ export class UserService {
         // Fetch invitations where friendId === userId
         try {
             const invitations = await InvitationService.getInvitationsForInvited(userId);
-            // Map to IUserPayload using the users data if available
-            const inviters: IUserPayload[] = invitations.map(inv => {
-                const inviterUser = users.find(u => u.userId === inv.inviterId);
-                if (inviterUser) {
-                    return {
-                        ...inviterUser,
-                        roles: inviterUser.roles.map(r => r as TUserTypes),
-                        sellerId: inviterUser.sellerId ?? ""
-                    } as IUserPayload;
-                }
-                // Fallback: minimal payload
-                return {
-                    userId: "",
-                    phoneNumber: '',
-                    roles: [],
-                    nameSurname: '',
-                    email: '',
-                    sub: '',
-                    iat: 0,
-                    exp: 0,
-                    sellerId: ''
-                } as IUserPayload;
-            });
-            return inviters;
+            const inviterIds = invitations.map(inv => inv.inviterId).filter(Boolean);
+            const inviters = await Promise.all(inviterIds.map(id => this.getUserInfoWithId(id)));
+            return inviters.filter((u): u is IUserPayload => !!u);
         } catch (error) {
             console.error('Error fetching invitations from DB:', error);
-
             return [];
         }
     }
@@ -147,7 +120,7 @@ export class UserService {
     static async getUserFriends(userId: string): Promise<IUserPayload[]> {
         try {
             const docs = await Friend.find({ userId }).sort({ createdAt: -1 }).lean();
-            return this.mapFriendsToPayload(docs);
+            return await this.mapFriendsToPayload(docs);
         } catch (error) {
             console.error('Error fetching friends from DB:', error);
             throw new Error('Failed to fetch user friends.');
@@ -182,17 +155,42 @@ export class UserService {
             throw new Error('Arkadaşın silinemedi. Belki de hiç arkadaşın olmadı );');
         }
     }
-    private static mapFriendsToPayload(docs: any[]): IUserPayload[] {
-        return docs.reduce((acc: IUserPayload[], d: any) => {
-            const user = users.find(u => u.userId === d.friendId);
-            if (user) {
-                acc.push({
-                    ...user,
-                    roles: user.roles.map(r => r as TUserTypes),
-                    sellerId: user.sellerId ?? ""
-                } as IUserPayload);
+    private static async mapFriendsToPayload(docs: any[]): Promise<IUserPayload[]> {
+        const friendIds = docs.map(d => d.friendId).filter(Boolean);
+        const users = await Promise.all(friendIds.map(id => this.getUserInfoWithId(id)));
+        return users.filter((u): u is IUserPayload => !!u);
+    }
+
+    private static async fetchUser(url: string): Promise<IUserPayload | null> {
+        try {
+            const response = await fetch(url, { method: "GET" });
+            if (!response.ok) {
+                const raw = await response.text();
+                console.log("[UserService] fetch non-200 body", { url, body: raw.slice(0, 400) });
+                return null;
             }
-            return acc;
-        }, []);
+            const raw = await response.text();
+            const payload = raw ? JSON.parse(raw) : null;
+            const data = payload?.data;
+            if (!data) {
+                console.log("[UserService] fetch missing data", { url, payload });
+                return null;
+            }
+            return {
+                userId: data.userId || "",
+                phoneNumber: data.phoneNumber || "",
+                roles: (data.roles || []).map((r: string) => r as TUserTypes),
+                nameSurname: data.nameSurname || "",
+                email: data.email || "",
+                sub: data.email || data.userId || "",
+                iat: 0,
+                exp: 0,
+                sellerId: data.sellerId || "",
+                avatar: data.avatarId || undefined
+            } as IUserPayload;
+        } catch (error) {
+            console.error("Error fetching user:", { url, error });
+            return null;
+        }
     }
 }

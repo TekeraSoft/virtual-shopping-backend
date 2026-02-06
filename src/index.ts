@@ -7,8 +7,10 @@ import wishlistRouter from './routes/wishlist.router';
 import userRouter from '@routes/user.router';
 import roomRouter from '@routes/room.router';
 import invitationRouter from './routes/invitation.router';
+import eventRouter from './routes/event.router';
 import { SocketHandler } from './handlers/socket.handler';
 import connectDB from './config/database';
+import { eventService } from './services/event.service';
 
 const PORT = process.env.PORT || 3021;
 
@@ -48,6 +50,11 @@ app.use("/room", (req, res, next) => {
 
 app.use("/invitation", invitationRouter);
 
+app.use("/event", (req, res, next) => {
+  req.io = io;
+  next();
+}, eventRouter);
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
   return;
@@ -55,6 +62,7 @@ app.get('/health', (req, res) => {
 
 // Initialize Socket Handler
 const socketHandler = new SocketHandler(io);
+eventService.setIo(io);
 
 // Handle Socket.IO connections
 io.on('connection', (socket) => {

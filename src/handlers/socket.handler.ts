@@ -3,6 +3,7 @@ import { PlayerService } from '../services/player.service';
 import { RoomService } from '../services/room.service';
 import { VoiceService } from '../services/voice.service';
 import { UserService } from '../services/user.service';
+import { eventRoomRealtimeService } from '../services/event-room-realtime.service';
 import { VoiceOffer, VoiceAnswer, VoiceIceCandidate, VoiceToggleMute } from '../types/voice/types';
 
 export class SocketHandler {
@@ -23,6 +24,9 @@ export class SocketHandler {
 
     // Room events
     this.handleRoomEvents(socket);
+
+    // Event room events
+    this.handleEventRoomEvents(socket);
 
     // RPC events
     this.handleRpcEvents(socket);
@@ -100,22 +104,42 @@ export class SocketHandler {
       rotation: { x: number; y: number; z: number, w: number };
       isGrounded: boolean;
     }) => {
+      const parsed = this.parsePlayerUpdatePayload(data);
+      if (!parsed) {
+        console.log("[socket] player:update parse failed", {
+          socketId: socket.id,
+          payloadType: typeof data,
+          isBuffer: Buffer.isBuffer(data),
+          hasTypeBuffer: (data as any)?.type === "Buffer"
+        });
+        return;
+      }
+
+      
       PlayerService.updatePlayerPosition(
-        data.userId,
-        data.roomId,
+        parsed.userId,
+        parsed.roomId,
         socket.id,
-        data.position,
-        data.rotation,
-        data.isGrounded
+        parsed.position,
+        parsed.rotation,
+        parsed.isGrounded
       );
+
+      const eventRoomChannel = `eventroom:${parsed.roomId}`;
 
       // console.log("player moved:", socket.id, { userId: data.userId, position: data.position, rotation: data.rotation });
       // Send to all other clients in the same room
-      socket.to(data.roomId).emit('player:moved', {
-        userId: data.userId,
-        position: data.position,
-        rotation: data.rotation,
-        isGrounded: data.isGrounded
+      socket.to(parsed.roomId).emit('player:moved', {
+        userId: parsed.userId,
+        position: parsed.position,
+        rotation: parsed.rotation,
+        isGrounded: parsed.isGrounded
+      });
+      socket.to(eventRoomChannel).emit('player:moved', {
+        userId: parsed.userId,
+        position: parsed.position,
+        rotation: parsed.rotation,
+        isGrounded: parsed.isGrounded
       });
     });
 
@@ -140,6 +164,7 @@ export class SocketHandler {
       }
       const room = RoomService.createRoom(data.userId, socket.id, data.nameSurname, player.avatarId || "");
       socket.join(room.roomId);
+      console.log("[socket] room:create joined", { roomId: room.roomId, socketId: socket.id, userId: data.userId });
       console.log("room", room);
       socket.emit('room:created', { roomId: room.roomId });
     });
@@ -149,6 +174,7 @@ export class SocketHandler {
       RoomService.removePlayerFromRoom(data.userId, data.roomId);
       VoiceService.removePeer(socket.id);
       socket.leave(data.roomId);
+      console.log("[socket] room:left left", { roomId: data.roomId, socketId: socket.id, userId: data.userId });
 
       socket.to(data.roomId).emit('room:lefted', {
         userId: data.userId
@@ -164,6 +190,7 @@ export class SocketHandler {
       }
       RoomService.addPlayerToRoom(data.roomId, socket.id, data.userId, data.nameSurname, player.avatarId || "");
       socket.join(data.roomId);
+      console.log("[socket] room:join joined", { roomId: data.roomId, socketId: socket.id, userId: data.userId });
 
       socket.emit('room:joined', { roomId: data.roomId });
       // Notify other users in the room
@@ -178,6 +205,12 @@ export class SocketHandler {
         players: roomObj ? Array.from(roomObj.players.entries()).map(([userId, { socketId, nameSurname, avatarId }]) => ({ userId, socketId, nameSurname, avatarId })) : []
       };
       console.log("room:getusers:", roomResponse);
+      const ioRoom = this.io.sockets.adapter.rooms.get(data.roomId);
+      console.log("[socket] room:getusers io room", {
+        roomId: data.roomId,
+        roomSize: ioRoom?.size ?? 0,
+        roomSocketIds: ioRoom ? Array.from(ioRoom.values()) : []
+      });
 
       socket.emit('room:users', { room: roomResponse });
     });
@@ -192,6 +225,48 @@ export class SocketHandler {
         socket.broadcast.to(data.roomId).emit("rpc:callback", { method: data.method, value: data.value, userId: data.userId, nameSurname: data.nameSurname });
       } else if (data.target === "me") {
         socket.emit("rpc:callback", { method: data.method, value: data.value });
+      }
+    });
+  }
+
+  private handleEventRoomEvents(socket: Socket): void {
+    socket.on('eventroom:join', (data: { roomId: string; userId: string }) => {
+      if (!data?.roomId || !data?.userId) {
+        socket.emit('eventroom:error', { message: 'roomId and userId are required' });
+        return;
+      }
+
+      const channel = `eventroom:${data.roomId}`;
+      socket.join(channel);
+
+      const memberUserIds = eventRoomRealtimeService.join(data.roomId, data.userId, socket.id);
+
+      socket.emit('eventroom:members', {
+        roomId: data.roomId,
+        userIds: memberUserIds
+      });
+
+      socket.to(channel).emit('eventroom:user-joined', {
+        roomId: data.roomId,
+        userId: data.userId
+      });
+    });
+
+    socket.on('eventroom:leave', (data: { roomId: string; userId: string }) => {
+      if (!data?.roomId || !data?.userId) {
+        socket.emit('eventroom:error', { message: 'roomId and userId are required' });
+        return;
+      }
+
+      const channel = `eventroom:${data.roomId}`;
+      const removed = eventRoomRealtimeService.leave(data.roomId, data.userId);
+      socket.leave(channel);
+
+      if (removed) {
+        socket.to(channel).emit('eventroom:user-left', {
+          roomId: data.roomId,
+          userId: data.userId
+        });
       }
     });
   }
@@ -290,6 +365,13 @@ export class SocketHandler {
   private handleDisconnectEvent(socket: Socket): void {
     socket.on('disconnect', (reason: string) => {
       console.log('Client disconnected:', socket.id, 'Reason:', reason);
+      const eventRoomMembership = eventRoomRealtimeService.leaveBySocket(socket.id);
+      if (eventRoomMembership) {
+        this.io.to(`eventroom:${eventRoomMembership.roomId}`).emit('eventroom:user-left', {
+          roomId: eventRoomMembership.roomId,
+          userId: eventRoomMembership.userId
+        });
+      }
 
       // Remove player from state
       const player = PlayerService.getPlayer(socket.id);
@@ -311,5 +393,78 @@ export class SocketHandler {
         });
       }
     });
+  }
+
+  private parsePlayerUpdatePayload(payload: any): {
+    userId: string;
+    roomId: string;
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number; w: number };
+    isGrounded: boolean;
+    source: "json" | "binary";
+  } | null {
+    if (!payload) return null;
+
+    // JSON payload
+    if (typeof payload === "object" && !Buffer.isBuffer(payload) && payload.userId && payload.roomId) {
+      return {
+        userId: payload.userId,
+        roomId: payload.roomId,
+        position: payload.position,
+        rotation: payload.rotation,
+        isGrounded: !!payload.isGrounded,
+        source: "json"
+      };
+    }
+
+    // Binary payload (Buffer / ArrayBuffer / Uint8Array / {type:"Buffer",data:number[]})
+    let buf: Buffer | null = null;
+    if (Buffer.isBuffer(payload)) {
+      buf = payload;
+    } else if (payload instanceof ArrayBuffer) {
+      buf = Buffer.from(payload);
+    } else if (payload instanceof Uint8Array) {
+      buf = Buffer.from(payload);
+    } else if (payload?.type === "Buffer" && Array.isArray(payload.data)) {
+      buf = Buffer.from(payload.data);
+    }
+
+    if (!buf) return null;
+
+    try {
+      let offset = 0;
+      const readU8 = () => buf.readUInt8(offset++);
+      const readBytes = (len: number) => {
+        const start = offset;
+        const end = offset + len;
+        offset = end;
+        return buf.subarray(start, end);
+      };
+      const readString = () => {
+        const len = readU8();
+        if (len <= 0) return "";
+        const bytes = readBytes(len);
+        return bytes.toString("utf8");
+      };
+      const readBool = () => readU8() === 1;
+      const readFloat = () => {
+        const val = buf.readFloatLE(offset);
+        offset += 4;
+        return val;
+      };
+
+      const userId = readString();
+      const roomId = readString();
+      const isGrounded = readBool();
+      const position = { x: readFloat(), y: readFloat(), z: readFloat() };
+      const rotation = { x: readFloat(), y: readFloat(), z: readFloat(), w: readFloat() };
+
+      if (!userId || !roomId) return null;
+
+      return { userId, roomId, position, rotation, isGrounded, source: "binary" };
+    } catch (err) {
+      console.error("[socket] player:update binary parse error", err);
+      return null;
+    }
   }
 }

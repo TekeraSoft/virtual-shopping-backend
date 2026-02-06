@@ -20,7 +20,7 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
         return;
     }
 
-    const inviterUser = UserService.getUserInfoWithId(user.userId);
+    const inviterUser = await UserService.getUserInfoWithId(user.userId);
 
     if (!inviterUser) {
         res.status(422).json({ responseType: responseTypes.userNotFound, message: 'Kullanıcı bulunamadı.' });
@@ -33,7 +33,7 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
         res.status(403).json({ responseType: responseTypes.userAlreadyFriend, message: 'User is already your friend' });
         return;
     }
-    const invitedUser = UserService.getUserInfoWithEmail(email);
+    const invitedUser = await UserService.getUserInfoWithEmail(email);
 
     if (!invitedUser) {
         res.status(404).json({ responseType: responseTypes.invitedUserNotFound, message: 'Davet edilen kullanıcı bulunamadı.' });
@@ -97,7 +97,7 @@ userRouter.post('/invite-friend', authenticate, async (req, res) => {
         return;
     }
 
-    const userInvited = UserService.getUserInfoWithEmail(email)
+    const userInvited = await UserService.getUserInfoWithEmail(email)
 
     if (userInvited && inviterUser) {
         console.log("userInvited ve inviter var")

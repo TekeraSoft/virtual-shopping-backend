@@ -21,7 +21,7 @@ roomRouter.post('/invite-friend', authenticate, async (req, res) => {
         return;
     }
 
-    const invitedUser = UserService.getUserInfoWithEmail(email);
+    const invitedUser = await UserService.getUserInfoWithEmail(email);
     if (invitedUser) {
         const room = RoomService.getRoom(roomId);
         if (room) {
@@ -36,10 +36,11 @@ roomRouter.post('/invite-friend', authenticate, async (req, res) => {
             room.invitedPlayers.set(invitedUser.userId, { nameSurname: invitedUser.nameSurname });
             const isPlayerOnline = PlayerService.getPlayer(invitedUser.userId);
             if (isPlayerOnline && isPlayerOnline.socketId) {
+                const inviterInfo = await UserService.getUserInfoWithId(user.userId);
                 io.to(isPlayerOnline.socketId).emit('room:invitation-received', {
                     roomId: roomId,
-                    inviterName: UserService.getUserInfoWithId(user.userId)?.nameSurname,
-                    message: `${UserService.getUserInfoWithId(user.userId)?.nameSurname} sizi odaya davet etti!`,
+                    inviterName: inviterInfo?.nameSurname,
+                    message: `${inviterInfo?.nameSurname} sizi odaya davet etti!`,
                     timestamp: Date.now()
                 });
             }
