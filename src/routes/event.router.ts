@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { eventService, EventPhase } from "@services/event.service";
 import { PlayerService } from "@services/player.service";
+import { eventEconomyService } from "@services/event-economy.service";
+import { UserService } from "@services/user.service";
 
 const eventRouter = Router();
 
@@ -58,6 +60,21 @@ eventRouter.get("/rooms", (req, res) => {
   res.json({ success: true, rooms: eventService.getRooms() });
 });
 
+// Client: get target price for a room
+eventRouter.get("/target-price/:roomId", (req, res) => {
+  const { roomId } = req.params || {};
+  if (!roomId) {
+    res.status(400).json({ error: "roomId is required" });
+    return;
+  }
+  const room = eventEconomyService.getRoom(roomId);
+  if (!room) {
+    res.status(404).json({ error: "ROOM_NOT_FOUND" });
+    return;
+  }
+  res.json({ success: true, roomId, targetBalance: room.targetBalance });
+});
+
 // Client: join lobby
 eventRouter.post("/join", (req, res) => {
   const { userId } = req.body || {};
@@ -67,10 +84,11 @@ eventRouter.post("/join", (req, res) => {
   }
 
   const result = eventService.join(userId);
-  if (!result.ok) {
+  if (!result.ok || !result.roomId) {
     res.status(409).json(result);
     return;
   }
+  eventEconomyService.joinUser(result.roomId, userId);
 
   const io = req.io;
   const roomChannel = `eventroom:${result.roomId}`;
@@ -97,7 +115,8 @@ eventRouter.post("/leave", (req, res) => {
 
   const result = eventService.leave(userId);
 
-  if (result.ok) {
+  if (result.ok && result.roomId) {
+    eventEconomyService.leaveUser(result.roomId, userId);
     const io = req.io;
     const roomChannel = `eventroom:${result.roomId}`;
     const socketId = PlayerService.getPlayer(userId)?.socketId;
@@ -112,6 +131,91 @@ eventRouter.post("/leave", (req, res) => {
   }
 
   res.json(result);
+});
+
+// Client: buy item (HTTP)
+eventRouter.post("/buy", async (req, res) => {
+  const { roomId, userId, catalogId, sellerId, price } = req.body || {};
+  if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number") {
+    res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price are required" });
+    return;
+  }
+  const result = eventEconomyService.buy(roomId, userId, catalogId, sellerId, price);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
+
+  if (result.winnerUserId) {
+    const winnerUser = await UserService.getUserInfoWithId(result.winnerUserId);
+    const winnerName = winnerUser?.nameSurname || result.winnerUserId;
+    const targetBalance = eventEconomyService.getTargetBalance(roomId) ?? 0;
+    const io = req.io;
+    if (io) {
+      io.to(`eventroom:${roomId}`).emit("event:winner", {
+        roomId,
+        userId: result.winnerUserId,
+        nameSurname: winnerName,
+        targetBalance
+      });
+      const breakState = { ...eventService.getState(), phase: "BREAK" as EventPhase };
+      io.to(`eventroom:${roomId}`).emit("event:state", breakState);
+    }
+  }
+
+  res.json({
+    success: true,
+    newBalance: result.newBalance,
+    catalogId,
+    remainingStock: result.remainingStock,
+    sellerCount: result.sellerCount
+  });
+});
+
+// Client: pickup money (HTTP)
+eventRouter.post("/pickup-money", async (req, res) => {
+  const { roomId, userId, amount } = req.body || {};
+  if (!roomId || !userId || typeof amount !== "number") {
+    res.status(400).json({ error: "roomId, userId, amount are required" });
+    return;
+  }
+  const result = eventEconomyService.pickupMoney(roomId, userId, amount);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
+  if (result.winnerUserId) {
+    const winnerUser = await UserService.getUserInfoWithId(result.winnerUserId);
+    const winnerName = winnerUser?.nameSurname || result.winnerUserId;
+    const targetBalance = eventEconomyService.getTargetBalance(roomId) ?? 0;
+    const io = req.io;
+    if (io) {
+      io.to(`eventroom:${roomId}`).emit("event:winner", {
+        roomId,
+        userId: result.winnerUserId,
+        nameSurname: winnerName,
+        targetBalance
+      });
+      const breakState = { ...eventService.getState(), phase: "BREAK" as EventPhase };
+      io.to(`eventroom:${roomId}`).emit("event:state", breakState);
+    }
+  }
+  res.json({ success: true, newBalance: result.newBalance });
+});
+
+// Client: steal random item (HTTP)
+eventRouter.post("/steal", (req, res) => {
+  const { roomId, userId } = req.body || {};
+  if (!roomId || !userId) {
+    res.status(400).json({ error: "roomId and userId are required" });
+    return;
+  }
+  const result = eventEconomyService.stealRandom(roomId, userId);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
+  res.json({ success: true, catalogId: result.catalogId, newBalance: result.newBalance });
 });
 
 export default eventRouter;

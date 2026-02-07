@@ -11,6 +11,7 @@ import eventRouter from './routes/event.router';
 import { SocketHandler } from './handlers/socket.handler';
 import connectDB from './config/database';
 import { eventService } from './services/event.service';
+import { eventEconomyService } from './services/event-economy.service';
 
 const PORT = process.env.PORT || 3021;
 
@@ -63,6 +64,7 @@ app.get('/health', (req, res) => {
 // Initialize Socket Handler
 const socketHandler = new SocketHandler(io);
 eventService.setIo(io);
+eventEconomyService.setIo(io);
 
 // Handle Socket.IO connections
 io.on('connection', (socket) => {

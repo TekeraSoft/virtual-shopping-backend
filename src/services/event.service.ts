@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import { eventEconomyService } from "./event-economy.service";
 
 export type EventPhase = "LOBBY" | "ACTIVE" | "BREAK" | "STOPPED";
 
@@ -60,6 +61,8 @@ class EventService {
     const prevPhase = this.phase;
     this.status = "STOPPED";
     this.phase = "STOPPED";
+    eventEconomyService.setGlobalPhase(this.phase);
+    eventEconomyService.clearAll();
     this.forcedPhase = null;
     this.rooms = [];
     this.cycleIndex = 0;
@@ -74,11 +77,13 @@ class EventService {
     const prevPhase = this.phase;
     this.forcedPhase = phase;
     this.phase = phase;
+    eventEconomyService.setGlobalPhase(this.phase);
     if (phase === "LOBBY") {
       this.rooms = [];
     }
     if (phase === "BREAK" && prevPhase !== "BREAK") {
       this.rooms = [];
+      eventEconomyService.clearAll();
       this.io?.emit("event:lobbies-cleared", { at: Date.now(), phase: this.phase });
     }
     if (prevPhase !== this.phase) {
@@ -149,8 +154,10 @@ class EventService {
 
   emitState() {
     if (!this.io) return;
-    this.io.emit("event:state", this.getState());
-    this.io.emit("room:list", { rooms: this.getRooms() });
+    const state = this.getState();
+    const rooms = this.getRooms();
+    this.io.emit("event:state", state);
+    this.io.emit("room:list", { rooms });
   }
 
   private sync(now: number) {
@@ -194,6 +201,18 @@ class EventService {
     } else {
       this.phase = "BREAK";
       this.timeLeftMs = cycleMs - cycleOffset;
+    }
+
+    if (previousPhase !== this.phase) {
+      eventEconomyService.setGlobalPhase(this.phase);
+      if (previousPhase === "LOBBY" && this.phase === "ACTIVE") {
+        for (const room of this.rooms) {
+          eventEconomyService.ensureRoom(room.roomId);
+        }
+      }
+      if (this.phase === "BREAK") {
+        eventEconomyService.clearAll();
+      }
     }
 
     // Reset lobbies when ACTIVE ends and BREAK starts.

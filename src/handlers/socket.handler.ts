@@ -4,6 +4,7 @@ import { RoomService } from '../services/room.service';
 import { VoiceService } from '../services/voice.service';
 import { UserService } from '../services/user.service';
 import { eventRoomRealtimeService } from '../services/event-room-realtime.service';
+import { eventEconomyService } from '../services/event-economy.service';
 import { VoiceOffer, VoiceAnswer, VoiceIceCandidate, VoiceToggleMute } from '../types/voice/types';
 
 export class SocketHandler {
@@ -27,6 +28,9 @@ export class SocketHandler {
 
     // Event room events
     this.handleEventRoomEvents(socket);
+
+    // Event economy events
+    this.handleEventEconomyEvents(socket);
 
     // RPC events
     this.handleRpcEvents(socket);
@@ -268,6 +272,41 @@ export class SocketHandler {
           userId: data.userId
         });
       }
+    });
+  }
+
+  private handleEventEconomyEvents(socket: Socket): void {
+    socket.on('event:preview', (data: { roomId: string; userId: string; catalogId: string; sellerId: string; price: number }) => {
+      if (!data?.roomId || !data?.userId || !data?.catalogId || !data?.sellerId || typeof data.price !== 'number') {
+        socket.emit('event:preview:reject', { reason: 'INVALID_PAYLOAD' });
+        return;
+      }
+      const result = eventEconomyService.preview(data.roomId, data.userId, data.catalogId, data.sellerId, data.price);
+      if (!result.ok) {
+        socket.emit('event:preview:reject', { reason: result.reason });
+        return;
+      }
+      socket.emit('event:preview:ok', { catalogId: data.catalogId });
+    });
+
+
+    socket.on('event:refund', (data: { roomId: string; userId: string; catalogId: string; sellerId: string; price: number }) => {
+      if (!data?.roomId || !data?.userId || !data?.catalogId || !data?.sellerId || typeof data.price !== 'number') {
+        socket.emit('event:refund:reject', { reason: 'INVALID_PAYLOAD' });
+        return;
+      }
+      const result = eventEconomyService.refund(data.roomId, data.userId, data.catalogId, data.sellerId, data.price);
+      if (!result.ok) {
+        socket.emit('event:refund:reject', { reason: result.reason });
+        return;
+      }
+      socket.emit('event:refund:ok', {
+        userId: data.userId,
+        newBalance: result.newBalance,
+        catalogId: data.catalogId,
+        remainingStock: result.remainingStock,
+        sellerCount: result.sellerCount
+      });
     });
   }
 
