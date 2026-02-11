@@ -290,24 +290,6 @@ export class SocketHandler {
     });
 
 
-    socket.on('event:refund', (data: { roomId: string; userId: string; catalogId: string; sellerId: string; price: number }) => {
-      if (!data?.roomId || !data?.userId || !data?.catalogId || !data?.sellerId || typeof data.price !== 'number') {
-        socket.emit('event:refund:reject', { reason: 'INVALID_PAYLOAD' });
-        return;
-      }
-      const result = eventEconomyService.refund(data.roomId, data.userId, data.catalogId, data.sellerId, data.price);
-      if (!result.ok) {
-        socket.emit('event:refund:reject', { reason: result.reason });
-        return;
-      }
-      socket.emit('event:refund:ok', {
-        userId: data.userId,
-        newBalance: result.newBalance,
-        catalogId: data.catalogId,
-        remainingStock: result.remainingStock,
-        sellerCount: result.sellerCount
-      });
-    });
   }
 
   private handleVoiceChatEvents(socket: Socket): void {

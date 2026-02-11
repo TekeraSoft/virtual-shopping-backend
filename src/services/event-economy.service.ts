@@ -16,12 +16,14 @@ export interface EventRoomEconomy {
   productSeller: Map<string, string>;
   productPrice: Map<string, number>;
   userBalances: Map<string, number>;
-  userPurchasedProducts: Map<string, Set<string>>;
+  userPurchasedProducts: Map<string, Map<string, { catalogId: string; sellerId: string; price: number }>>;
   userSellerCounts: Map<string, Map<string, number>>;
+  userPickups: Map<string, { id: string; amount: number }[]>;
+  pickupSeq: number;
   winnerUserId: string | null;
 }
 
-const DEFAULT_TARGET = 100;
+const DEFAULT_TARGET = 10000;
 const DEFAULT_VARIATIONS = [0.03, 0.05, 0.1];
 const DEFAULT_STOCK = 5;
 
@@ -77,6 +79,8 @@ export class EventEconomyService {
       userBalances: new Map(),
       userPurchasedProducts: new Map(),
       userSellerCounts: new Map(),
+      userPickups: new Map(),
+      pickupSeq: 0,
       winnerUserId: null
     };
 
@@ -127,8 +131,9 @@ export class EventEconomyService {
 
   private getUserState(room: EventRoomEconomy, userId: string) {
     if (!room.userBalances.has(userId)) room.userBalances.set(userId, 0);
-    if (!room.userPurchasedProducts.has(userId)) room.userPurchasedProducts.set(userId, new Set());
+    if (!room.userPurchasedProducts.has(userId)) room.userPurchasedProducts.set(userId, new Map());
     if (!room.userSellerCounts.has(userId)) room.userSellerCounts.set(userId, new Map());
+    if (!room.userPickups.has(userId)) room.userPickups.set(userId, []);
   }
 
   joinUser(roomId: string, userId: string): { targetBalance: number } {
@@ -143,6 +148,23 @@ export class EventEconomyService {
     room.userBalances.delete(userId);
     room.userPurchasedProducts.delete(userId);
     room.userSellerCounts.delete(userId);
+    room.userPickups.delete(userId);
+  }
+
+  getInventory(roomId: string, userId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
+    this.getUserState(room, userId);
+    const balance = room.userBalances.get(userId) ?? 0;
+    const purchasedMap = room.userPurchasedProducts.get(userId) ?? new Map();
+    const purchased = Array.from(purchasedMap.values());
+    const sellerCountsMap = room.userSellerCounts.get(userId) ?? new Map();
+    const sellerCounts: Record<string, number> = {};
+    for (const [sellerId, count] of sellerCountsMap.entries()) {
+      sellerCounts[sellerId] = count;
+    }
+    const pickups = room.userPickups.get(userId) ?? [];
+    return { ok: true, balance, purchasedCatalogIds: purchased, sellerCounts, pickups };
   }
 
   getProductSnapshot(roomId: string) {
@@ -172,7 +194,7 @@ export class EventEconomyService {
     const stock = room.productStock.get(catalogId) ?? 0;
     if (stock <= 0) return { ok: false, reason: "OUT_OF_STOCK" };
 
-    const purchased = room.userPurchasedProducts.get(userId) || new Set<string>();
+    const purchased = room.userPurchasedProducts.get(userId) || new Map();
     if (purchased.has(catalogId)) return { ok: false, reason: "ALREADY_BOUGHT" };
 
     const sellerCounts = room.userSellerCounts.get(userId) || new Map<string, number>();
@@ -197,7 +219,7 @@ export class EventEconomyService {
     const stock = room.productStock.get(catalogId) ?? 0;
     if (stock <= 0) return { ok: false, reason: "OUT_OF_STOCK" };
 
-    const purchased = room.userPurchasedProducts.get(userId) || new Set<string>();
+    const purchased = room.userPurchasedProducts.get(userId) || new Map();
     if (purchased.has(catalogId)) return { ok: false, reason: "ALREADY_BOUGHT" };
 
     const sellerCounts = room.userSellerCounts.get(userId) || new Map<string, number>();
@@ -205,12 +227,12 @@ export class EventEconomyService {
     if (currentSellerCount >= 2) return { ok: false, reason: "SELLER_LIMIT" };
 
     room.productStock.set(catalogId, stock - 1);
-    purchased.add(catalogId);
+    const effectivePrice = room.productPrice.get(catalogId) ?? price;
+    purchased.set(catalogId, { catalogId, sellerId, price: effectivePrice });
     room.userPurchasedProducts.set(userId, purchased);
     sellerCounts.set(sellerId, currentSellerCount + 1);
     room.userSellerCounts.set(userId, sellerCounts);
 
-    const effectivePrice = room.productPrice.get(catalogId) ?? price;
     const newBalance = (room.userBalances.get(userId) ?? 0) + effectivePrice;
     room.userBalances.set(userId, newBalance);
 
@@ -244,7 +266,7 @@ export class EventEconomyService {
 
     const purchased = room.userPurchasedProducts.get(userId);
     if (!purchased || !purchased.has(catalogId)) return { ok: false, reason: "NOT_OWNED" };
-
+    const item = purchased.get(catalogId);
     purchased.delete(catalogId);
 
     const sellerCounts = room.userSellerCounts.get(userId) || new Map<string, number>();
@@ -255,7 +277,7 @@ export class EventEconomyService {
     const stock = room.productStock.get(catalogId) ?? 0;
     room.productStock.set(catalogId, stock + 1);
 
-    const effectivePrice = room.productPrice.get(catalogId) ?? price;
+    const effectivePrice = item?.price ?? room.productPrice.get(catalogId) ?? price;
     const newBalance = (room.userBalances.get(userId) ?? 0) - effectivePrice;
     room.userBalances.set(userId, newBalance);
 
@@ -283,9 +305,10 @@ export class EventEconomyService {
     if (!purchased || purchased.size === 0) return { ok: false, reason: "NO_PRODUCTS" };
 
     const items = Array.from(purchased.values());
-    const catalogId = items[Math.floor(Math.random() * items.length)];
-    const sellerId = room.productSeller.get(catalogId) || "";
-    const effectivePrice = room.productPrice.get(catalogId) ?? 0;
+    const picked = items[Math.floor(Math.random() * items.length)];
+    const catalogId = picked.catalogId;
+    const sellerId = picked.sellerId || room.productSeller.get(catalogId) || "";
+    const effectivePrice = picked.price ?? room.productPrice.get(catalogId) ?? 0;
     purchased.delete(catalogId);
 
     const sellerCounts = room.userSellerCounts.get(userId) || new Map<string, number>();
@@ -304,15 +327,37 @@ export class EventEconomyService {
     if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
     if (room.status === "ENDED") return { ok: false, reason: "ROOM_ENDED" };
     if (this.globalPhase !== "ACTIVE") return { ok: false, reason: "PHASE_NOT_ACTIVE" };
+    this.getUserState(room, userId);
     const newBalance = (room.userBalances.get(userId) ?? 0) + amount;
     room.userBalances.set(userId, newBalance);
+    const pickupId = `${room.roomId}-${++room.pickupSeq}`;
+    const list = room.userPickups.get(userId) ?? [];
+    list.push({ id: pickupId, amount });
+    room.userPickups.set(userId, list);
     let winnerUserId: string | null = null;
     if (room.winnerUserId === null && newBalance === room.targetBalance) {
       room.winnerUserId = userId;
       room.status = "ENDED";
       winnerUserId = userId;
     }
-    return { ok: true, newBalance, winnerUserId };
+    return { ok: true, newBalance, winnerUserId, pickupId };
+  }
+
+  removePickup(roomId: string, userId: string, pickupId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
+    if (room.status === "ENDED") return { ok: false, reason: "ROOM_ENDED" };
+    if (this.globalPhase !== "ACTIVE") return { ok: false, reason: "PHASE_NOT_ACTIVE" };
+    this.getUserState(room, userId);
+    const list = room.userPickups.get(userId) ?? [];
+    const idx = list.findIndex(p => p.id === pickupId);
+    if (idx === -1) return { ok: false, reason: "PICKUP_NOT_FOUND" };
+    const amount = list[idx].amount;
+    list.splice(idx, 1);
+    room.userPickups.set(userId, list);
+    const newBalance = (room.userBalances.get(userId) ?? 0) - amount;
+    room.userBalances.set(userId, newBalance);
+    return { ok: true, newBalance };
   }
 }
 

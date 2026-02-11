@@ -75,6 +75,21 @@ eventRouter.get("/target-price/:roomId", (req, res) => {
   res.json({ success: true, roomId, targetBalance: room.targetBalance });
 });
 
+// Client: preview item (HTTP)
+eventRouter.post("/preview", (req, res) => {
+  const { roomId, userId, catalogId, sellerId, price } = req.body || {};
+  if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number") {
+    res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price are required" });
+    return;
+  }
+  const result = eventEconomyService.preview(roomId, userId, catalogId, sellerId, price);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
+  res.json({ success: true, catalogId });
+});
+
 // Client: join lobby
 eventRouter.post("/join", (req, res) => {
   const { userId } = req.body || {};
@@ -158,8 +173,6 @@ eventRouter.post("/buy", async (req, res) => {
         nameSurname: winnerName,
         targetBalance
       });
-      const breakState = { ...eventService.getState(), phase: "BREAK" as EventPhase };
-      io.to(`eventroom:${roomId}`).emit("event:state", breakState);
     }
   }
 
@@ -196,11 +209,68 @@ eventRouter.post("/pickup-money", async (req, res) => {
         nameSurname: winnerName,
         targetBalance
       });
-      const breakState = { ...eventService.getState(), phase: "BREAK" as EventPhase };
-      io.to(`eventroom:${roomId}`).emit("event:state", breakState);
     }
   }
+  res.json({ success: true, newBalance: result.newBalance, pickupId: result.pickupId });
+});
+
+// Client: refund item (HTTP)
+eventRouter.post("/refund", (req, res) => {
+  const { roomId, userId, catalogId, sellerId, price } = req.body || {};
+  if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number") {
+    res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price are required" });
+    return;
+  }
+  const result = eventEconomyService.refund(roomId, userId, catalogId, sellerId, price);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
+  res.json({
+    success: true,
+    newBalance: result.newBalance,
+    catalogId,
+    remainingStock: result.remainingStock,
+    sellerCount: result.sellerCount
+  });
+});
+
+// Client: remove picked up money (HTTP)
+eventRouter.post("/pickup-remove", (req, res) => {
+  const { roomId, userId, pickupId } = req.body || {};
+  if (!roomId || !userId || !pickupId) {
+    res.status(400).json({ error: "roomId, userId, pickupId are required" });
+    return;
+  }
+  const result = eventEconomyService.removePickup(roomId, userId, pickupId);
+  if (!result.ok) {
+    res.status(409).json({ error: result.reason });
+    return;
+  }
   res.json({ success: true, newBalance: result.newBalance });
+});
+
+// Client: get inventory (HTTP)
+eventRouter.get("/inventory/:roomId/:userId", (req, res) => {
+  const { roomId, userId } = req.params || {};
+  if (!roomId || !userId) {
+    res.status(400).json({ error: "roomId and userId are required" });
+    return;
+  }
+  const result = eventEconomyService.getInventory(roomId, userId);
+  if (!result.ok) {
+    res.status(404).json({ error: result.reason });
+    return;
+  }
+  res.json({
+    success: true,
+    roomId,
+    userId,
+    balance: result.balance,
+    purchasedItems: result.purchasedCatalogIds,
+    sellerCounts: result.sellerCounts,
+    pickups: result.pickups
+  });
 });
 
 // Client: steal random item (HTTP)
