@@ -23,7 +23,7 @@ export interface EventRoomEconomy {
   winnerUserId: string | null;
 }
 
-const DEFAULT_TARGET = 10000;
+const DEFAULT_TARGET = 100;
 const DEFAULT_VARIATIONS = [0.03, 0.05, 0.1];
 const DEFAULT_STOCK = 5;
 
@@ -287,11 +287,19 @@ export class EventEconomyService {
       remainingStock: stock + 1
     });
 
+    let winnerUserId: string | null = null;
+    if (room.winnerUserId === null && newBalance === room.targetBalance) {
+      room.winnerUserId = userId;
+      room.status = "ENDED";
+      winnerUserId = userId;
+    }
+
     return {
       ok: true,
       newBalance,
       remainingStock: stock + 1,
-      sellerCount: Math.max(0, currentSellerCount - 1)
+      sellerCount: Math.max(0, currentSellerCount - 1),
+      winnerUserId
     };
   }
 
@@ -357,7 +365,13 @@ export class EventEconomyService {
     room.userPickups.set(userId, list);
     const newBalance = (room.userBalances.get(userId) ?? 0) - amount;
     room.userBalances.set(userId, newBalance);
-    return { ok: true, newBalance };
+    let winnerUserId: string | null = null;
+    if (room.winnerUserId === null && newBalance === room.targetBalance) {
+      room.winnerUserId = userId;
+      room.status = "ENDED";
+      winnerUserId = userId;
+    }
+    return { ok: true, newBalance, winnerUserId };
   }
 }
 

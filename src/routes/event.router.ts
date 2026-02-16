@@ -215,7 +215,7 @@ eventRouter.post("/pickup-money", async (req, res) => {
 });
 
 // Client: refund item (HTTP)
-eventRouter.post("/refund", (req, res) => {
+eventRouter.post("/refund", async (req, res) => {
   const { roomId, userId, catalogId, sellerId, price } = req.body || {};
   if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number") {
     res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price are required" });
@@ -225,6 +225,20 @@ eventRouter.post("/refund", (req, res) => {
   if (!result.ok) {
     res.status(409).json({ error: result.reason });
     return;
+  }
+  if (result.winnerUserId) {
+    const winnerUser = await UserService.getUserInfoWithId(result.winnerUserId);
+    const winnerName = winnerUser?.nameSurname || result.winnerUserId;
+    const targetBalance = eventEconomyService.getTargetBalance(roomId) ?? 0;
+    const io = req.io;
+    if (io) {
+      io.to(`eventroom:${roomId}`).emit("event:winner", {
+        roomId,
+        userId: result.winnerUserId,
+        nameSurname: winnerName,
+        targetBalance
+      });
+    }
   }
   res.json({
     success: true,
@@ -236,7 +250,7 @@ eventRouter.post("/refund", (req, res) => {
 });
 
 // Client: remove picked up money (HTTP)
-eventRouter.post("/pickup-remove", (req, res) => {
+eventRouter.post("/pickup-remove", async (req, res) => {
   const { roomId, userId, pickupId } = req.body || {};
   if (!roomId || !userId || !pickupId) {
     res.status(400).json({ error: "roomId, userId, pickupId are required" });
@@ -246,6 +260,20 @@ eventRouter.post("/pickup-remove", (req, res) => {
   if (!result.ok) {
     res.status(409).json({ error: result.reason });
     return;
+  }
+  if (result.winnerUserId) {
+    const winnerUser = await UserService.getUserInfoWithId(result.winnerUserId);
+    const winnerName = winnerUser?.nameSurname || result.winnerUserId;
+    const targetBalance = eventEconomyService.getTargetBalance(roomId) ?? 0;
+    const io = req.io;
+    if (io) {
+      io.to(`eventroom:${roomId}`).emit("event:winner", {
+        roomId,
+        userId: result.winnerUserId,
+        nameSurname: winnerName,
+        targetBalance
+      });
+    }
   }
   res.json({ success: true, newBalance: result.newBalance });
 });
