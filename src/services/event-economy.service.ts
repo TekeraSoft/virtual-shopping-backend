@@ -23,7 +23,7 @@ export interface EventRoomEconomy {
   winnerUserId: string | null;
 }
 
-const DEFAULT_TARGET = 100;
+const DEFAULT_TARGET = 10000;
 const DEFAULT_VARIATIONS = [0.03, 0.05, 0.1];
 const DEFAULT_STOCK = 5;
 
