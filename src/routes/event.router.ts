@@ -150,12 +150,12 @@ eventRouter.post("/leave", (req, res) => {
 
 // Client: buy item (HTTP)
 eventRouter.post("/buy", async (req, res) => {
-  const { roomId, userId, catalogId, sellerId, price } = req.body || {};
-  if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number") {
-    res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price are required" });
+  const { roomId, userId, catalogId, sellerId, price, name, imageUrl } = req.body || {};
+  if (!roomId || !userId || !catalogId || !sellerId || typeof price !== "number" || !name || !imageUrl) {
+    res.status(400).json({ error: "roomId, userId, catalogId, sellerId, price, name, imageUrl are required" });
     return;
   }
-  const result = eventEconomyService.buy(roomId, userId, catalogId, sellerId, price);
+  const result = eventEconomyService.buy(roomId, userId, catalogId, sellerId, price, name, imageUrl);
   if (!result.ok) {
     res.status(409).json({ error: result.reason });
     return;

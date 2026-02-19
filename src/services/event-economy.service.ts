@@ -16,7 +16,7 @@ export interface EventRoomEconomy {
   productSeller: Map<string, string>;
   productPrice: Map<string, number>;
   userBalances: Map<string, number>;
-  userPurchasedProducts: Map<string, Map<string, { catalogId: string; sellerId: string; price: number }>>;
+  userPurchasedProducts: Map<string, Map<string, { catalogId: string; sellerId: string; price: number; name: string; imageUrl: string }>>;
   userSellerCounts: Map<string, Map<string, number>>;
   userPickups: Map<string, { id: string; amount: number }[]>;
   pickupSeq: number;
@@ -204,7 +204,7 @@ export class EventEconomyService {
     return { ok: true };
   }
 
-  buy(roomId: string, userId: string, catalogId: string, sellerId: string, price: number) {
+  buy(roomId: string, userId: string, catalogId: string, sellerId: string, price: number, name: string, imageUrl: string) {
     const room = this.rooms.get(roomId);
     if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
     if (room.status === "ENDED") return { ok: false, reason: "ROOM_ENDED" };
@@ -228,7 +228,7 @@ export class EventEconomyService {
 
     room.productStock.set(catalogId, stock - 1);
     const effectivePrice = room.productPrice.get(catalogId) ?? price;
-    purchased.set(catalogId, { catalogId, sellerId, price: effectivePrice });
+    purchased.set(catalogId, { catalogId, sellerId, price: effectivePrice, name, imageUrl });
     room.userPurchasedProducts.set(userId, purchased);
     sellerCounts.set(sellerId, currentSellerCount + 1);
     room.userSellerCounts.set(userId, sellerCounts);
