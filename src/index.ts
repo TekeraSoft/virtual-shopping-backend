@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
@@ -36,6 +37,7 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
+app.use("/assets", express.static(path.join(__dirname, "..", "public", "assets")));
 
 app.use('/wishlist', wishlistRouter);
 
