@@ -108,16 +108,29 @@ eventRouter.post("/join", (req, res) => {
   const io = req.io;
   const roomChannel = `eventroom:${result.roomId}`;
   const socketId = PlayerService.getPlayer(userId)?.socketId;
+  const existingUsers = (result.existingUserIds || []).map((id: string) => {
+    const player = PlayerService.getPlayer(id);
+    return { userId: id, avatarId: player?.avatarId || null };
+  });
   if (io && socketId) {
     const sock = io.sockets.sockets.get(socketId);
     sock?.join(roomChannel);
     sock?.to(roomChannel).emit("eventroom:user-joined", {
       roomId: result.roomId,
-      userId
+      userId,
+      avatarId: PlayerService.getPlayer(userId)?.avatarId || null
     });
   }
 
-  res.json(result);
+  res.json({
+    ok: result.ok,
+    roomId: result.roomId,
+    lobbyIndex: result.lobbyIndex,
+    count: result.count,
+    capacity: result.capacity,
+    avatarId: PlayerService.getPlayer(userId)?.avatarId || null,
+    existingUsers
+  });
 });
 
 // Client: leave lobby
