@@ -148,8 +148,13 @@ export class UserService {
     }
     static async removeFriend(userId: string, friendId: string): Promise<boolean> {
         try {
-            await Friend.findOneAndDelete({ friendId: friendId, userId: userId }).lean();
-            return true;
+            const result = await Friend.deleteMany({
+                $or: [
+                    { userId, friendId },
+                    { userId: friendId, friendId: userId }
+                ]
+            }).lean();
+            return (result.deletedCount || 0) > 0;
         } catch (error) {
             console.error('Error fetching friends from DB:', error);
             throw new Error('Arkadaşın silinemedi. Belki de hiç arkadaşın olmadı );');

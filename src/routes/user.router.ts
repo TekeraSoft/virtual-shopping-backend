@@ -6,6 +6,19 @@ import { authenticate } from '@middlewares/authtenticate.checker';
 
 const userRouter = Router();
 
+const mapFriendListWithStatus = (friends: Awaited<ReturnType<typeof UserService.getUserFriends>>) => {
+    return friends.map((friend) => {
+        const playerData = PlayerService.getPlayer(friend.userId);
+        return {
+            userId: friend.userId,
+            email: friend.email,
+            nameSurname: friend.nameSurname,
+            online: playerData?.online || false,
+            avatarId: playerData?.avatarId || null
+        };
+    });
+};
+
 // Add item to wishlist
 userRouter.post('/invite-friend', authenticate, async (req, res) => {
     const { email } = req.body;
@@ -215,7 +228,10 @@ userRouter.post('/accept-friend', authenticate, async (req, res) => {
 });
 
 userRouter.delete('/remove-friend', authenticate, async (req, res) => {
-    const friendId = req.query.friendId as string;
+    const friendIdFromQuery = req.query.friendId as string | undefined;
+    const emailFromQuery = req.query.email as string | undefined;
+    const friendIdFromBody = req.body?.friendId as string | undefined;
+    const emailFromBody = req.body?.email as string | undefined;
     const user = req.user;
     if (!user || !user.userId) {
         res.status(401).json({ responseType: "Unauthorized", message: 'Unauthorized' });
@@ -228,7 +244,56 @@ userRouter.delete('/remove-friend', authenticate, async (req, res) => {
     }
 
     try {
-        await UserService.removeFriend(user.userId, friendId);
+        const friendId = friendIdFromQuery || friendIdFromBody;
+        const email = emailFromQuery || emailFromBody;
+
+        let friendUserId = friendId;
+
+        if (!friendUserId && email) {
+            const friendUser = await UserService.getUserInfoWithEmail(email);
+            if (!friendUser) {
+                res.status(404).json({ responseType: responseTypes.userNotFound, message: 'User not found.' });
+                return;
+            }
+            friendUserId = friendUser.userId;
+        }
+
+        if (!friendUserId) {
+            res.status(400).json({ responseType: responseTypes.friendRemoveFailed, message: 'friendId or email is required.' });
+            return;
+        }
+
+        const removed = await UserService.removeFriend(user.userId, friendUserId);
+        if (!removed) {
+            res.status(404).json({ responseType: responseTypes.friendRemoveFailed, message: 'Friend not found.' });
+            return;
+        }
+
+        const userPlayer = PlayerService.getPlayer(user.userId);
+        const removedFriendPlayer = PlayerService.getPlayer(friendUserId);
+
+        if (userPlayer?.socketId) {
+            const userFriends = await UserService.getUserFriends(user.userId);
+            const payload = mapFriendListWithStatus(userFriends);
+            io.to(userPlayer.socketId).emit('friend:removed', payload);
+            console.log('[friend:removed] emitted to remover', {
+                userId: user.userId,
+                socketId: userPlayer.socketId,
+                friendCount: payload.length
+            });
+        }
+
+        if (removedFriendPlayer?.socketId) {
+            const removedFriendList = await UserService.getUserFriends(friendUserId);
+            const payload = mapFriendListWithStatus(removedFriendList);
+            io.to(removedFriendPlayer.socketId).emit('friend:removed', payload);
+            console.log('[friend:removed] emitted to removed friend', {
+                userId: friendUserId,
+                socketId: removedFriendPlayer.socketId,
+                friendCount: payload.length
+            });
+        }
+
         res.status(200).json({ responseType: responseTypes.friendRemoved, message: 'Friend removed successfully.' });
         return;
     } catch (error) {
